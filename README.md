@@ -11,8 +11,6 @@
 
 **一个把「写代码」重新变成战斗的回合制卡牌编程游戏。**
 
-> **“vibe code太久，忘了代码怎么写，来玩code the battle，在回合制卡牌对战中证明你的代码能比ai写得好！”**
-
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
 
 [![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://warpshlczy.github.io/Code-the-Battle/)
@@ -110,9 +108,7 @@
 
 于是就有了这个游戏。
 
-**“vibe code太久，忘了代码怎么写，来玩code the battle，在回合制卡牌对战中证明你的代码能比ai写得好！”**
-
-这不是一句口号，而是整套设计的起点：
+整套设计的起点：
 
 | 普通卡牌游戏 | Code the Battle |
 | --- | --- |
