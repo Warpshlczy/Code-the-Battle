@@ -7,11 +7,11 @@
 
 # CODE THE BATTLE
 
-### Protocol Breach
-
-**A turn-based card game where the cards and the tactics are code you write yourself.**
+***A turn-based card game that turns writing code back into combat.***
 
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
+
+**Write cards, write tactics, build your deck with your own code, and try to beat an LLM-driven AI opponent in a turn-based card game.**
 
 [![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://warpshlczy.github.io/Code-the-Battle/)
 [![Deploy](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml)
@@ -21,9 +21,7 @@
 [![Three.js](https://img.shields.io/badge/Three.js-0.170-000000?logo=three.js&logoColor=white)](https://threejs.org/)
 [![Vitest](https://img.shields.io/badge/Vitest-2.1-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
-`STATIC` · `NO ACCOUNT` · `AI IS ONLY THE OPPONENT` · `YOUR CODE`
-
-**[中文](README.zh.md) · English**
+**[简体中文](README.zh.md) · English**
 
 </div>
 
@@ -75,16 +73,11 @@ Both sides start at 100 HP and get 5 Energy per turn. Turn scripts share 14 cred
 
 ### 2.1 The moment most of us know
 
-You ask an AI to write a feature. It runs.
+Using AI to write code is fine.
 
-You ask it to change something. It still runs.
+But if you cannot read or write the code yourself, how can you ask AI to do it for you?
 
-Three days later you open the file and find:
-
-- variable names that look like passwords;
-- comments describing the previous version;
-- code that works, but you cannot explain **why** it works;
-- a language you used to know, now reduced to something you only meet during review.
+Many people may never go back to hand-writing code, but staying in practice still matters.
 
 That is where this game came from.
 
@@ -99,7 +92,7 @@ A few design choices:
 | AI plays your cards or builds your deck | AI is only the opponent; it cannot read your code |
 | Review is a chart | Review is a code interrogation with evidence |
 
-### 2.2 Three hard rules
+### 2.2 Hard rules
 
 1. **The code really runs.** Your `deal_damage` goes through IR, abstract interpretation, the sandbox and the battle engine, then lands in the event log. Animations are presentation; the result is not pre-scripted.
 2. **The AI cannot see your cards.** It gets the public board and its own hand. Card names, descriptions, your hand, your draw order and your code never enter the prompt.

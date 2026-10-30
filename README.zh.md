@@ -7,13 +7,11 @@
 
 # CODE THE BATTLE
 
-### 断链协议 · Protocol Breach
-
-**一个把写代码重新变成战斗的回合制卡牌编程游戏。**
+***一个重新把写代码变成战斗的回合制卡牌编程游戏。***
 
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
 
-**写牌，写战术，打一场。输赢之外，看看代码到底做了什么。**
+**写牌，写战术，用你的代码能力构筑属于你的卡组，在回合制卡牌游戏中尝试战胜LLM驱动的AI对手！**
 
 [![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://warpshlczy.github.io/Code-the-Battle/)
 [![Deploy](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml)
@@ -23,9 +21,7 @@
 [![Three.js](https://img.shields.io/badge/Three.js-0.170-000000?logo=three.js&logoColor=white)](https://threejs.org/)
 [![Vitest](https://img.shields.io/badge/Vitest-2.1-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
-`纯前端` · `无账号` · `AI 只做对手` · `代码由你写`
-
-**[中文](README.zh.md) · [English](README.md)**
+**[简体中文](README.zh.md) · [English](README.md)**
 
 </div>
 
@@ -77,16 +73,11 @@ AI 只当对手。牌和战术都由你写，规则引擎只负责执行和记�
 
 ### 2.1 那个所有人都经历过的瞬间
 
-你让 AI 写了一个功能。它跑起来了。
+让AI帮你写代码，这是好事。
 
-你让它再改改。它也跑起来了。
+但是如果你连自己本身连代码都看不懂，也不会写，怎么好意思让AI帮你？
 
-三天后，你打开文件，发现：
-
-- 变量名像密码；
-- 注释在解释上一版逻辑；
-- 你知道它“能跑”，但说不清它**为什么能跑**；
-- 你曾经会的语言，变成了一种“只在 review 时见过”的外语。
+虽然很多人可能不会再古法编程，但是保持手感很重要。
 
 于是就有了这个游戏。
 
@@ -101,7 +92,7 @@ AI 只当对手。牌和战术都由你写，规则引擎只负责执行和记�
 | AI 帮你出牌 / 自动构筑 | AI 只做对手，连你的代码都读不到 |
 | 复盘是统计图表 | 复盘是“读码审讯”，答错会指出证据 |
 
-### 2.2 三条硬规则
+### 2.2 硬规则
 
 1. **代码真的在跑。** 你的 `deal_damage` 会经过 IR、抽象解释、沙盒和战斗引擎，最后写进事件日志。动画只是表现，结算不是预设好的。
 2. **AI 看不到你的牌。** 对手只拿公开场面和自己的手牌。卡名、描述、你的手牌、抽牌顺序和代码都不进提示词。
