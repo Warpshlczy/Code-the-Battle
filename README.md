@@ -42,16 +42,13 @@
 - [11 · 两套预算：效果上限与算力](#economy)
 - [12 · AI 对手](#ai)
 - [13 · 战后复盘](#report)
-- [14 · 中英双语与默认英文](#i18n)
+- [14 · 语言](#i18n)
 - [15 · 技术架构](#architecture)
 - [16 · 项目结构](#structure)
 - [17 · 开发、测试与构建](#dev)
-- [18 · GitHub Pages 部署](#deploy)
-- [19 · README 是怎么做出来的](#readme)
-- [20 · 设计取舍与边界](#design)
-- [21 · FAQ](#faq)
-- [22 · English quick start](#english)
-- [23 · 贡献与致谢](#credits)
+- [18 · 设计取舍与边界](#design)
+- [19 · FAQ](#faq)
+- [20 · English quick start](#english)
 
 ---
 
@@ -950,66 +947,10 @@ ctx.gain_energy(3)
 ---
 
 <a id="i18n"></a>
-## 14 · 中英双语与默认英文
+## 14 · 语言
 
-**这是当前版本的新能力：游戏本体默认英文，右上角按钮随时切换中文。**
+**游戏本体默认英文和中文。**
 
-### 14.1 体验
-
-- 首次打开：English。
-- 右上角固定按钮：`EN / 中文`。
-- 切换无需刷新，标题页、构筑、对局、复盘、规则弹窗、API 参考、卡面画笔全部即时更新。
-- 选择写入 `localStorage` 的 `code-the-battle.lang`，下次打开保持。
-- 默认英文，但不会强制覆盖已有选择。
-
-### 14.2 本地化范围
-
-| 层 | 处理方式 |
-| --- | --- |
-| 标题 / 构筑 / 战斗 / 复盘 UI | `useT()` 内联中英文 |
-| 规则弹窗 / API 参考 / 画笔工具 | `useT()` / `pick()` |
-| 引擎日志 / 错误 / 熔断信息 | 引擎保持中文，渲染层用 `translateMessage()` |
-| 卡名 / 卡面描述 / 类型 | `translateCardName()` / `translateCardText()` |
-| 3D 牌桌标签 / 浮动数字 | `TableScene` 接收 `lang`，纹理缓存 key 带语言 |
-| 默认牌组 / 牌库 / 寄存器 | 英文默认内容 + 中文源内容并存 |
-| 自定义卡牌 | 永不自动改写 |
-
-### 14.3 为什么引擎内部仍是中文
-
-- 测试、重放签名和历史战报都依赖稳定文本；
-- 翻译发生在**渲染边界**，不改变规则状态；
-- 这样切换语言不会改变对局、哈希或复盘结果。
-
-### 14.4 语言切换时哪些内容会变
-
-- 未修改的示例卡：会切换到对应语言的卡名、描述和注释。
-- 默认寄存器：如果仍是默认值，会切换到对应语言的枚举值。
-- 你改过的卡、你写的寄存器：保持原样，不做机器翻译。
-- 自绘卡面：不变。
-
-### 14.5 技术实现
-
-```tsx
-export type Lang = 'en' | 'zh';
-
-const STORAGE_KEY = 'code-the-battle.lang';
-let current: Lang = readInitial(); // default: 'en'
-
-export function useT(): Translate {
-  const lang = useLang();
-  return (zh, en) => (lang === 'zh' ? zh : en);
-}
-```
-
-- `useSyncExternalStore` 订阅语言变化。
-- `LanguageToggle` 挂在 `App` 顶层，所有屏幕共享。
-- `translateMessage()` 使用精确映射 + 正则规则 + 短语回退。
-- 3D 纹理缓存 key 加入语言，切换时重建牌桌。
-- `document.documentElement.lang` 同步为 `en` / `zh-CN`，读屏和浏览器翻译都能拿到正确语言。
-
----
-
-<a id="architecture"></a>
 ## 15 · 技术架构
 
 ### 15.1 总览
