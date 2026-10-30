@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Local runtime data and tooling workspaces
+.data/
+canvas/
+.tools/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs and OS files
+*.log
+*.local
+.DS_Store
+
+# Generated README drafts (the committed README is hand-authored)
+README.readmeai.md

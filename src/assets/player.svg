@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-label="Operator K-13">
+  <defs>
+    <linearGradient id="jacket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14212b"/>
+      <stop offset="48%" stop-color="#0a1118"/>
+      <stop offset="100%" stop-color="#05080d"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b98968"/>
+      <stop offset="100%" stop-color="#5d3b2c"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b232a"/>
+      <stop offset="100%" stop-color="#06090d"/>
+    </linearGradient>
+    <linearGradient id="rimCyan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#38f2cf" stop-opacity="0"/>
+      <stop offset="60%" stop-color="#38f2cf" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#38f2cf" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="rimMagenta" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#ff2f7d" stop-opacity="0"/>
+      <stop offset="55%" stop-color="#ff2f7d" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#ff2f7d" stop-opacity="0.1"/>
+    </linearGradient>
+    <radialGradient id="screen" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#38f2cf" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#0e5b58" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#38f2cf" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+    <pattern id="circuit" width="46" height="46" patternUnits="userSpaceOnUse">
+      <path d="M0 34h18V14h28M8 46V34h14" fill="none" stroke="#38f2cf" stroke-width="1" opacity="0.18"/>
+      <circle cx="18" cy="14" r="1.6" fill="#38f2cf" opacity="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- ambient -->
+  <ellipse cx="160" cy="470" rx="200" ry="240" fill="#38f2cf" opacity="0.1" filter="url(#soft)"/>
+  <ellipse cx="470" cy="330" rx="170" ry="260" fill="#ff2f7d" opacity="0.09" filter="url(#soft)"/>
+  <rect x="18" y="40" width="564" height="720" fill="url(#circuit)" opacity="0.7"/>
+
+  <!-- cables behind -->
+  <g fill="none" stroke="#173b45" stroke-width="7" opacity="0.9">
+    <path d="M60 90c-10 120 40 190 10 300s50 180 20 300"/>
+    <path d="M540 60c30 130-20 230 10 340s-30 210 0 330"/>
+  </g>
+  <g fill="none" stroke="#38f2cf" stroke-width="1.6" opacity="0.5">
+    <path d="M60 90c-10 120 40 190 10 300s50 180 20 300"/>
+    <path d="M540 60c30 130-20 230 10 340s-30 210 0 330"/>
+  </g>
+
+  <!-- chair -->
+  <path d="M120 690l40-180 300 0 40 180z" fill="#05090d" stroke="#132c36" stroke-width="3"/>
+  <path d="M148 660l28-120 250 0 28 120z" fill="#0a131a"/>
+
+  <!-- torso -->
+  <path d="M190 292c30-28 72-38 112-38s84 10 112 38l36 168-36 132H190l-36-132z" fill="url(#jacket)"/>
+  <path d="M225 300c22-18 48-26 78-26s58 8 80 26l20 156-34 112H238l-34-112z" fill="#0d1720"/>
+  <path d="M302 280v272" stroke="#1d3944" stroke-width="2"/>
+  <path d="M272 300l30 34 30-34" fill="none" stroke="#38f2cf" stroke-width="2.6" opacity="0.85" filter="url(#glow)"/>
+  <path d="M240 396h124" stroke="#ff2f7d" stroke-width="2" opacity="0.55"/>
+  <path d="M252 420h100" stroke="#38f2cf" stroke-width="1" opacity="0.4"/>
+
+  <!-- shoulder armor / exo rig -->
+  <path d="M188 302l-42 34-16 78 66 20 18-96z" fill="#101c25" stroke="#1e4450" stroke-width="3"/>
+  <path d="M412 302l42 34 16 78-66 20-18-96z" fill="#101c25" stroke="#1e4450" stroke-width="3"/>
+  <path d="M152 352l20-24 26 58-26 12z" fill="#38f2cf" opacity="0.2"/>
+  <path d="M448 352l-20-24-26 58 26 12z" fill="#ff2f7d" opacity="0.22"/>
+  <g stroke="#38f2cf" stroke-width="2" opacity="0.8">
+    <path d="M170 318v84M186 330v62"/>
+  </g>
+  <g stroke="#ff2f7d" stroke-width="2" opacity="0.8">
+    <path d="M430 318v84M414 330v62"/>
+  </g>
+
+  <!-- neck -->
+  <path d="M268 248h64l-6 46-52 0z" fill="url(#skin)"/>
+  <path d="M268 282c18 12 46 12 64 0l-2 22-60 0z" fill="#2b1a14" opacity="0.7"/>
+
+  <!-- head -->
+  <path d="M232 158c0-56 34-92 68-92s68 36 68 92c0 46-10 78-28 96-12 14-26 20-40 20s-28-6-40-20c-18-18-28-50-28-96z" fill="url(#skin)"/>
+  <!-- hair -->
+  <path d="M226 162c-4-58 34-104 76-104 44 0 78 40 74 102l-14-8-10-42-18 26-22-32-18 32-22-24-16 34-14 4z" fill="url(#hair)"/>
+  <path d="M240 168c8-30 28-48 58-48 26 0 44 14 56 38l-10 18-18-24-16 18-18-20-18 22-18-14-10 22z" fill="#111820"/>
+  <!-- visor -->
+  <path d="M240 210l50-6 26 6 28-6 18 10-6 20-42 4-26 10-28-8-24-6z" fill="#071014" stroke="#38f2cf" stroke-width="2" opacity="0.98"/>
+  <path d="M252 220l38-4 22 6 34-4" stroke="#38f2cf" stroke-width="4" opacity="0.9" filter="url(#glow)"/>
+  <path d="M372 224l10 4-8 10-8-8z" fill="#ff2f7d" filter="url(#glow)"/>
+  <!-- jaw / focus -->
+  <path d="M286 270c10 4 24 4 34 0" stroke="#3e231b" stroke-width="3" fill="none"/>
+  <path d="M250 238c8 24 20 38 38 44" stroke="#ff9d78" stroke-width="1.2" opacity="0.35" fill="none"/>
+  <!-- headset -->
+  <path d="M224 196c-14 2-22 16-18 30l10 30 16-8-6-26 4-18z" fill="#0d1a22" stroke="#38f2cf" stroke-width="2"/>
+  <path d="M380 196c14 2 22 16 18 30l-10 30-16-8 6-26-4-18z" fill="#0d1a22" stroke="#ff2f7d" stroke-width="2"/>
+  <path d="M234 206l8 46" stroke="#38f2cf" stroke-width="2" filter="url(#glow)"/>
+
+  <!-- left arm to hologram -->
+  <path d="M196 350c-30 34-56 74-78 118l26 22c34-36 66-68 96-92l-22-58z" fill="#0e1820" stroke="#1b3a46" stroke-width="3"/>
+  <path d="M216 372c-26 28-48 58-66 88" stroke="#38f2cf" stroke-width="2" opacity="0.65"/>
+  <!-- hand -->
+  <path d="M116 474l32-14 18 22-14 26-30 6-16-14z" fill="#8a6048"/>
+  <g stroke="#38f2cf" stroke-width="2" opacity="0.9">
+    <path d="M120 480l20 0M122 490l18 2M132 500l12 0"/>
+  </g>
+
+  <!-- right arm -->
+  <path d="M406 350c34 32 62 72 82 116l-28 20c-30-36-60-66-90-88l20-56z" fill="#0d1720" stroke="#3d1b2b" stroke-width="3"/>
+  <path d="M420 372c22 26 42 54 58 82" stroke="#ff2f7d" stroke-width="2" opacity="0.55"/>
+  <path d="M478 468l28 10 6 28-24 14-24-18z" fill="#6f4a39"/>
+
+  <!-- holographic console -->
+  <g transform="translate(96 470)">
+    <ellipse cx="30" cy="70" rx="150" ry="54" fill="url(#screen)" filter="url(#soft)"/>
+    <g fill="none" stroke="#38f2cf" filter="url(#glow)">
+      <ellipse cx="30" cy="70" rx="132" ry="42" stroke-width="2" opacity="0.75"/>
+      <ellipse cx="30" cy="70" rx="96" ry="30" stroke-width="1.4" opacity="0.5"/>
+      <ellipse cx="30" cy="70" rx="152" ry="58" stroke-width="1" opacity="0.28"/>
+      <path d="M-80 70h220" stroke-width="1" opacity="0.4"/>
+      <path d="M30 -30v200" stroke-width="1" opacity="0.3"/>
+    </g>
+    <!-- floating code bars -->
+    <g fill="#38f2cf" opacity="0.72">
+      <rect x="-58" y="-6" width="46" height="3"/><rect x="-48" y="6" width="64" height="2"/>
+      <rect x="-64" y="18" width="34" height="2"/><rect x="72" y="-14" width="30" height="2"/>
+      <rect x="86" y="-2" width="42" height="3"/><rect x="66" y="12" width="24" height="2"/>
+    </g>
+    <g fill="#ff2f7d" opacity="0.65">
+      <rect x="96" y="28" width="16" height="3"/>
+    </g>
+    <g fill="#38f2cf" filter="url(#glow)">
+      <circle cx="-74" cy="40" r="2.5"/><circle cx="128" cy="52" r="2"/><circle cx="92" cy="-26" r="2"/>
+    </g>
+  </g>
+
+  <!-- rim light -->
+  <path d="M232 150c-8 56 0 106 34 136" fill="none" stroke="url(#rimCyan)" stroke-width="4" filter="url(#glow)"/>
+  <path d="M380 150c8 56 0 106-34 136" fill="none" stroke="url(#rimMagenta)" stroke-width="4" filter="url(#glow)"/>
+  <path d="M186 310l-30 92 22 136" fill="none" stroke="#38f2cf" stroke-width="2.2" opacity="0.55" filter="url(#glow)"/>
+  <path d="M452 310l30 92-22 136" fill="none" stroke="#ff2f7d" stroke-width="2.2" opacity="0.55" filter="url(#glow)"/>
+
+  <!-- particles -->
+  <g fill="#38f2cf" filter="url(#glow)">
+    <circle cx="80" cy="300" r="2"/><circle cx="150" cy="180" r="1.4"/><circle cx="96" cy="620" r="1.8"/>
+  </g>
+  <g fill="#ff2f7d" filter="url(#glow)">
+    <circle cx="520" cy="360" r="2"/><circle cx="466" cy="170" r="1.4"/><circle cx="520" cy="610" r="1.6"/>
+  </g>
+</svg>
