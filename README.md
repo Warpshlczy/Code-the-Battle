@@ -15,7 +15,7 @@
 
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
 
-[![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://Warpshlczy.github.io/Code-the-Battle/)
+[![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://warpshlczy.github.io/Code-the-Battle/)
 [![Deploy](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml)
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -190,7 +190,7 @@
 <a id="live"></a>
 ## 04 · 在线试玩
 
-**Live demo：** https://Warpshlczy.github.io/Code-the-Battle/
+**Live demo：** https://warpshlczy.github.io/Code-the-Battle/
 
 - 无需登录，无需下载，纯静态部署。
 - 推荐使用最新版 Chrome / Edge / Firefox / Safari。
@@ -1247,7 +1247,7 @@ npm run build
 
 ### 18.1 在线地址
 
-**https://Warpshlczy.github.io/Code-the-Battle/**
+**https://warpshlczy.github.io/Code-the-Battle/**
 
 ### 18.2 工作流
 
@@ -1474,7 +1474,7 @@ Key 只存在页面内存，刷新即消失。没有后端。浏览器会直接�
 
 ### Play
 
-**Live:** https://Warpshlczy.github.io/Code-the-Battle/
+**Live:** https://warpshlczy.github.io/Code-the-Battle/
 
 No account, no backend, no build step required.
 
@@ -1585,7 +1585,7 @@ GitHub Actions runs tests, builds `dist/`, configures Pages and deploys via `act
 
 **Vibe code 太久？那就用代码证明一次。**
 
-[▶ PLAY LIVE](https://Warpshlczy.github.io/Code-the-Battle/) · [RULES](#rules) · [API](#api) · [ARCHITECTURE](#architecture) · [BACK TO TOP](#top)
+[▶ PLAY LIVE](https://warpshlczy.github.io/Code-the-Battle/) · [RULES](#rules) · [API](#api) · [ARCHITECTURE](#architecture) · [BACK TO TOP](#top)
 
 <sub>Built with React, TypeScript, Vite, Three.js and Vitest. No backend. No account. No AI code completion.</sub>
 
