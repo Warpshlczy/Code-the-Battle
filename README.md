@@ -13,7 +13,7 @@
 
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
 
-**写牌，写战术，打一场。输赢之外，看看代码到底做了什么。**
+**写牌，写战术，用你的代码能力构筑属于你的卡组，在回合制卡牌游戏中尝试战胜LLM驱动的AI对手！。**
 
 [![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://warpshlczy.github.io/Code-the-Battle/)
 [![Deploy](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml)
