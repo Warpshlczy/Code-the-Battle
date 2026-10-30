@@ -9,9 +9,11 @@
 
 ### 断链协议 · Protocol Breach
 
-**一个把「写代码」重新变成战斗的回合制卡牌编程游戏。**
+**一个把写代码重新变成战斗的回合制卡牌编程游戏。**
 
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
+
+**写牌，写战术，打一场。输赢之外，看看代码到底做了什么。**
 
 [![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://warpshlczy.github.io/Code-the-Battle/)
 [![Deploy](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml)
@@ -21,7 +23,9 @@
 [![Three.js](https://img.shields.io/badge/Three.js-0.170-000000?logo=three.js&logoColor=white)](https://threejs.org/)
 [![Vitest](https://img.shields.io/badge/Vitest-2.1-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
-`NO BACKEND` · `NO ACCOUNT` · `NO AI CODE COMPLETION` · `JUST YOUR CODE`
+`纯前端` · `无账号` · `AI 只做对手` · `代码由你写`
+
+**[中文](README.md) · [English](README.en.md)**
 
 </div>
 
@@ -59,27 +63,13 @@
 
 你在构筑阶段亲手写 **5–10 张卡牌**，在对局阶段亲手写 **每一回合的战术脚本**。规则引擎负责静态分析、沙盒执行、伤害结算和日志记录。战后再把整局拆成逐行归因、牌堆回放和读码审讯。
 
-对面坐着一台AI驱动的人形支配体。它和你使用同一套卡牌、能量、牌堆与算力规则；它看不到你的代码，也看不到你的手牌，更不会提前告诉你下一步想做什么。
+对面坐着一台AI驱动的人形支配体。它和你使用同一套费用、能量、牌堆与算力规则，但有自己的牌组；它看不到你的代码，也看不到你的手牌，更不会提前告诉你下一步想做什么。
 
-> 这不是“让 AI 帮你写牌”的游戏。
-> 恰恰相反：**AI 只是对手，代码必须由你写。**
+AI 只当对手。牌和战术都由你写，规则引擎只负责执行和记录。
 
-<div align="center">
+游戏只有两层：构筑期写 5–10 张牌，对局期每回合写一段战术。其他功能都围绕这两层转。
 
-| 项目 | 规模 |
-| --- | --- |
-| 应用代码 | ~13,900 行 TypeScript / TSX |
-| 测试 | 8 个测试文件，53 项测试 |
-| 规则引擎 | 词法 → 语法 → IR → 抽象解释 → 沙盒执行 |
-| 对局常量 | 双方 100 HP · 每回合 5 能量 · 起手 5 张 · 30 回合上限 |
-| 牌组 | 5–10 张，最多 10 张 |
-| API | 29 个核心 API + 只读快照访问 |
-| AI 人格 | 5 种固定战斗风格 + 可选外接 LLM 提议 |
-| 复盘 | 行级归因 · 牌堆时间轴 · 读码审讯 · 重放校验 |
-| 语言 | 默认 English，右上角随时切换 中文 / EN |
-| 部署 | GitHub Actions → GitHub Pages，纯静态站点 |
-
-</div>
+双方 100 HP，每回合 5 能量；脚本共享 14 点算力，卡牌效果由能量付费。规则引擎先静态分析，再在沙盒里执行，最后把每一步写进事件日志。
 
 ---
 
@@ -101,7 +91,7 @@
 
 于是就有了这个游戏。
 
-整套设计的起点：
+设计上做了几个取舍：
 
 | 普通卡牌游戏 | Code the Battle |
 | --- | --- |
@@ -112,18 +102,18 @@
 | AI 帮你出牌 / 自动构筑 | AI 只做对手，连你的代码都读不到 |
 | 复盘是统计图表 | 复盘是“读码审讯”，答错会指出证据 |
 
-### 2.2 三个承诺
+### 2.2 三条硬规则
 
-1. **代码真的在运行。** 不是动画假装，不是预设脚本。你的 `deal_damage` 会经过 IR、抽象解释、沙盒和战斗引擎，最后写进事件日志。
-2. **AI 真的没有偷看。** 对手只拿公开场面和自己的手牌。卡名、描述、你的手牌、你的抽牌顺序、你的代码，全部不进提示词。
-3. **复盘真的能学到东西。** 每一行 API 调用都会记录来源、行号、算力、伤害、格挡、治疗和牌堆操作。战斗结束后，你能看到“哪一行代码造成了什么”。
+1. **代码真的在跑。** 你的 `deal_damage` 会经过 IR、抽象解释、沙盒和战斗引擎，最后写进事件日志。动画只是表现，结算不是预设好的。
+2. **AI 看不到你的牌。** 对手只拿公开场面和自己的手牌。卡名、描述、你的手牌、抽牌顺序和代码都不进提示词。
+3. **复盘查得到每一行。** 每次 API 调用都会记录来源、行号、算力、伤害、格挡、治疗和牌堆操作。打完之后，你能看到哪一行代码造成了什么。
 
 ### 2.3 适合谁
 
 - 想重新找回“手写逻辑”快感的开发者；
 - 喜欢 Slay the Spire / 炉石 / 万智牌，但想要更深一层程序表达的玩家；
 - 正在学编程，想把变量、循环、条件、函数放进一个**有即时反馈**的场景里的人；
-- 被 AI 生成代码包围，想确认自己还能从零写出一个能跑的系统的人；
+- 每天和 AI 生成的代码打交道，想确认自己还能从零写出一个能跑的系统的人；
 - 喜欢赛博美术、全息牌桌、电子终端和故障美学的人。
 
 ---
@@ -237,7 +227,7 @@ npm test          # vitest run
 npm run test:watch
 ```
 
-当前基线：**8 个测试文件、53 项测试全部通过**。覆盖规则、算力、AI、表现、平衡、重放和冒烟流程。
+测试覆盖规则、算力、AI、演出、平衡、重放和冒烟流程。当前有 8 个测试文件、53 项测试。
 
 ### 5.5 脚本一览
 
@@ -248,6 +238,10 @@ npm run test:watch
 | `npm run preview` | 本地预览生产构建 |
 | `npm test` | 运行一次 Vitest |
 | `npm run test:watch` | 监听模式运行 Vitest |
+
+### 5.6 发布
+
+推送到 `main` 后，`.github/workflows/deploy.yml` 会安装依赖、跑测试、构建 `dist/`，再发布到 GitHub Pages。线上地址是 https://warpshlczy.github.io/Code-the-Battle/ 。也可以在 Actions 页面手动触发 `workflow_dispatch`。
 
 ---
 
@@ -314,7 +308,7 @@ npm run test:watch
 | 牌组 | 5–10 张 |
 | 回合上限 | 30 |
 | 玩家牌组费用展示 | 所有卡牌费用之和 |
-| 对手牌组 | 与玩家同一套牌、能量和牌堆规则 |
+| 对手牌组 | 独立牌组，沿用同一套费用、能量和牌堆规则 |
 
 ### 7.2 一个回合的固定流程
 
@@ -624,7 +618,7 @@ ctx.playcard()
 ctx.deal_damage("enemy", 10 * ctx.getTurn())
 ```
 
-这不是“聪明”，而是把最坏情况推到很高。抽象解释会按上界估算，一旦超过 14 点算力，确认命令就会失败。
+这会把最坏情况推得很高。抽象解释按上界估算，一旦超过 14 点算力，确认命令就会失败。
 
 正确思路：
 
@@ -759,7 +753,7 @@ ctx.draw(8)
 ctx.gain_energy(3)
 ```
 
-这些写法不是不能用，而是：
+这些写法能用，但代价很高：
 
 - 抽象解释会按上界估算；
 - 平方项会惩罚大数值；
@@ -771,7 +765,7 @@ ctx.gain_energy(3)
 <a id="economy"></a>
 ## 11 · 两套预算：效果上限与算力
 
-这是本作最重要的设计：**卡牌强度与脚本强度不是一套账。**
+卡牌和脚本按两套预算结算。卡牌看费用，脚本看每回合 14 点算力。
 
 ### 11.1 构筑期：效果上限 `P`
 
@@ -789,19 +783,11 @@ ctx.gain_energy(3)
 - 卡牌效果不重复扣算力，只花能量。
 - 确认命令时按最坏情况锁定；运行时再次兜底。
 
-### 11.3 为什么这样设计
+### 11.3 为什么分开算
 
-| 如果只有一套预算 | 后果 |
-| --- | --- |
-| 只用费用限制卡牌 | 脚本可以无限调度，手牌顺序失去意义 |
-| 只用算力限制脚本 | 卡牌可以无限强，费用变成装饰 |
-| 两套混在一起 | 玩家无法理解“这张卡为什么强/这段脚本为什么贵” |
+只用费用限制卡牌，脚本可以无限调度，手牌顺序就没意义了。只用算力限制脚本，卡牌可以无限强，费用就成了装饰。两套混在一起，玩家很难理解一张卡为什么强、一段脚本为什么贵。
 
-所以：
-
-- **卡牌**回答“这张牌本身有多强”；
-- **脚本**回答“这一回合你调度得有多复杂”；
-- 两者分开，战斗才有“构筑 + 操作”两层决策。
+所以卡牌只算“这张牌本身有多强”，脚本只算“这一回合调度得有多复杂”。两者分开，构筑和操作才是两层独立的决策。
 
 ### 11.4 算力价格的直觉
 
@@ -857,7 +843,7 @@ ctx.gain_energy(3)
 
 ### 12.4 公平性
 
-- 对手使用同一套牌、能量、牌堆和算力规则。
+- 对手沿用同一套费用、能量、牌堆和算力规则，牌组独立。
 - 对手没有意图预告。
 - 对手不能读玩家代码/手牌/抽牌顺序。
 - 对手的卡名与描述不进入提示词。
@@ -868,7 +854,7 @@ ctx.gain_energy(3)
 <a id="report"></a>
 ## 13 · 战后复盘
 
-复盘不是“看个结算图”，而是把这局代码摊开审。
+复盘会把这一局的代码摊开。
 
 ### 13.1 代码账本（Code ledger）
 
@@ -899,14 +885,14 @@ ctx.gain_energy(3)
 
 ### 13.3 读码审讯（Code interrogation）
 
-题目直接从本局记录里长出来：
+题目来自本局记录：
 
 - 某张牌在第几回合被弃掉？
 - 哪个 API 消耗了最多算力？
 - 哪一行导致了能量中断？
 - 这个寄存器最后一次写入是什么？
 
-答错会给出证据和解释。没有奖励，只有理解。
+答错会给出证据和解释。
 
 ### 13.4 对手档案（Opponent file）
 
@@ -949,8 +935,17 @@ ctx.gain_energy(3)
 <a id="i18n"></a>
 ## 14 · 语言
 
-**游戏本体默认英文和中文。**
+**游戏默认英文，右上角 `EN / 中文` 可以随时切换。**
 
+- 首次打开是 English；选择写入 `localStorage`，下次打开保持。
+- 标题页、构筑、对局、复盘、规则弹窗、API 参考和卡面画笔都会即时更新。
+- 引擎内部日志保持中文，渲染层负责翻译；切换语言不会改变对局、事件、哈希或重放结果。
+- 没改过的示例卡和默认寄存器会跟着语言切换；你写过的卡和寄存器保持原样。
+- 3D 牌桌的标签、浮动数字和纹理也会切换。界面文案在 `src/i18n/`。
+
+---
+
+<a id="architecture"></a>
 ## 15 · 技术架构
 
 ### 15.1 总览
@@ -1148,17 +1143,16 @@ Code-the-Battle/
 | `transition.test.ts` | 出牌滑移、抽牌追加、扇形几何 |
 | `visual.test.ts` | 格挡 cue、阶段 cue、弃牌 cue、重名卡面 |
 
-### 17.3 质量基线
+跑一遍：
 
 ```bash
 npm test
-# 8 test files passed, 53 tests passed
-
 npm run build
-# tsc -b && vite build → dist/
 ```
 
-### 17.4 修改规则时的建议
+当前 8 个测试文件、53 项测试。构建产物在 `dist/`。
+
+### 17.3 修改规则时的建议
 
 1. 先改 `config.ts` 的常量。
 2. 同步更新 `analyze.ts` 和 `sandbox.ts` 的边界。
@@ -1167,7 +1161,7 @@ npm run build
 5. 如果改了 UI 结构，检查右上角语言按钮是否仍不遮挡头部按钮。
 6. 如果改了 3D 牌桌，检查 `table.test.ts` 和竖屏布局。
 
-### 17.5 构建产物
+### 17.4 构建产物
 
 - `dist/` 是纯静态文件。
 - 无后端、无环境变量、无数据库。
@@ -1176,150 +1170,35 @@ npm run build
 
 ---
 
-<a id="deploy"></a>
-## 18 · GitHub Pages 部署
-
-### 18.1 在线地址
-
-**https://warpshlczy.github.io/Code-the-Battle/**
-
-### 18.2 工作流
-
-仓库使用 `.github/workflows/deploy.yml`：
-
-```yaml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-```
-
-### 18.3 它做了什么
-
-1. 检出仓库。
-2. 安装 Node 22 与依赖。
-3. 跑 53 项测试。
-4. 执行 `tsc -b && vite build`。
-5. 启用 / 配置 Pages。
-6. 上传 `dist/` 为 Pages artifact。
-7. 部署到 GitHub Pages。
-
-### 18.4 手动部署
-
-```bash
-npm ci
-npm test
-npm run build
-```
-
-然后把 `dist/` 交给任意静态托管即可。也可以手动触发 Actions 的 `workflow_dispatch`。
-
----
-
-<a id="readme"></a>
-## 19 · README 是怎么做出来的
-
-这份 README 的流程是：
-
-1. 下载并安装 [`eli64s/readme-ai`](https://github.com/eli64s/readme-ai)（`readmeai 0.6.0.rc1`）。
-2. 使用 **offline 模式** 生成长 README 脚手架（`cosmic` 主题）。
-3. 发现自动生成的 1.3MB 版本包含空 banner、错误徽章和与项目无关的模板文本。
-4. 保留“结构灵感”，重写为当前版本：
-   - 所有规则数字来自 `src/engine/config.ts`；
-   - 所有 API 价格来自 `CREDIT_COSTS`；
-   - 所有功能描述来自实际源码；
-   - 宣传语、双语、部署和复盘说明按本仓库定制。
-5. 用 `npm test` 与 `npm run build` 验证。
-
-一句话：**readme-ai 负责脚手架，人负责事实。**
-
-如果你想重新生成一版草稿：
-
-```bash
-readmeai \
-  --repository . \
-  --api offline \
-  --output README.readmeai.md
-```
-
-生成结果只作为参考，不要直接提交。
-
----
-
 <a id="design"></a>
-## 20 · 设计取舍与边界
+## 18 · 设计取舍与边界
 
-### 20.1 为什么不让 AI 代写卡牌
+### 18.1 为什么不让 AI 写牌
 
-因为这会摧毁整个游戏的核心：
+如果 AI 帮你写牌，你做的事就变成挑生成结果；如果 AI 帮你写战术，你只能看它打；如果 AI 能读你的代码，它就能针对你，不再公平。
 
-- 如果 AI 帮你写牌，你只是在“挑选生成结果”；
-- 如果 AI 帮你写战术，你只是在“看它打”；
-- 如果 AI 能读你的代码，它就能针对你，而不是公平对战。
+所以这里有一条硬边界：**AI 只当对手，卡牌和战术由玩家写。**
 
-所以边界非常硬：
+### 18.2 为什么没有状态、稀有度和卡牌生成
 
-> **AI 只做对手。卡牌与战术必须由玩家手写。**
+- 状态系统会把“读代码”变成“读规则书”；
+- 稀有度会把“构筑”变成“抽卡”；
+- 卡牌生成会把“手写”变成“随机池”；
+- 这些都会把重点从写代码移开。
 
-### 20.2 为什么没有状态系统 / 稀有度 / 卡牌生成
-
-- 状态系统会让“读代码”变成“读规则书”；
-- 稀有度会让“构筑”变成“抽卡”；
-- 卡牌生成会让“手写”变成“随机池”；
-- 这些都与“证明你的代码能打”这个核心冲突。
-
-### 20.3 为什么卡牌和脚本是两套预算
+### 18.3 为什么卡牌和脚本分开算
 
 - 卡牌是**静态强度**；
 - 脚本是**动态调度**；
 - 两者混在一起，玩家无法建立稳定的策略直觉。
 
-### 20.4 为什么引擎内部保留中文
+### 18.4 为什么引擎内部保留中文
 
 - 测试快照、历史战报、重放哈希都依赖稳定文本；
 - 翻译放在渲染层，切换语言不影响规则；
 - 这样中英双语不会破坏确定性。
 
-### 20.5 明确的非目标
+### 18.5 明确的非目标
 
 - 不做联网对战；
 - 不做账号系统；
@@ -1332,7 +1211,7 @@ readmeai \
 ---
 
 <a id="faq"></a>
-## 21 · FAQ
+## 19 · FAQ
 
 ### Q1：我需要会 Python 吗？
 
@@ -1340,7 +1219,7 @@ readmeai \
 
 ### Q2：卡牌真的会执行我的代码吗？
 
-会。源码先经过词法/语法、IR、抽象解释和硬限制，再由沙盒解释器执行。不是动画预设。
+会。源码先经过词法/语法、IR、抽象解释和硬限制，再由沙盒解释器执行。动画只是表现，结算由解释器完成。
 
 ### Q3：AI 会偷看我的牌或代码吗？
 
@@ -1383,7 +1262,7 @@ Key 只存在页面内存，刷新即消失。没有后端。浏览器会直接�
 
 ### Q11：为什么默认是英文？
 
-当前版本面向更广的演示场景，默认英文；右上角随时切中文，选择会保存在浏览器里。
+默认英文，方便不看中文的玩家直接试；右上角随时切中文，选择会保存在浏览器里。
 
 ### Q12：可以用于教学 / 直播 / 二次创作吗？
 
@@ -1392,44 +1271,21 @@ Key 只存在页面内存，刷新即消失。没有后端。浏览器会直接�
 ---
 
 <a id="english"></a>
-## 22 · English quick start
+## 20 · English quick start
 
-### What is this?
+完整英文版见 [README.en.md](README.en.md)。
 
 **Code the Battle** is a browser-only, turn-based card game where you write the cards and the tactics yourself.
 
 - Build 5–10 cards in a small Python-like DSL.
 - Each card has fixed fields: `name`, `cost`, `type`, `target`, and one open `effect(self, ctx)`.
 - During a duel, write a short script each turn in the terminal.
-- The rules engine statically analyzes, sandbox-executes, and logs everything.
-- The AI opponent, SENTINEL-07, only sees the public board and its own hand.
-
-> **“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”**
-
-### Play
+- The rules engine statically analyzes and sandbox-executes every line, then logs the result.
+- The AI opponent sees only the public board and its own hand.
 
 **Live:** https://warpshlczy.github.io/Code-the-Battle/
 
-No account, no backend, no build step required.
-
-Default language is **English**. Use the `EN / 中文` button in the top-right corner to switch at any time. The choice is stored in `localStorage`; custom cards are never machine-translated.
-
-### Core rules
-
-| Rule | Value |
-| --- | --- |
-| HP | 100 / 100 |
-| Energy per turn | 5 |
-| Opening hand | 5 |
-| Draw to | 5 each turn |
-| Deck size | 5–10 cards |
-| Turn limit | 30 |
-| Block | No cap; expires at your next turn start |
-| Script budget | 14 credits per turn |
-| Card effects | Paid with Energy, not credits |
-| Win | Reduce the opponent to 0 HP; after 30 turns, remaining HP ratio decides |
-
-### Card example
+Default language is **English**. Use the `EN / 中文` button in the top-right corner to switch at any time. Custom cards are never machine-translated.
 
 ```python
 class DirectStrike(Card):
@@ -1442,30 +1298,6 @@ class DirectStrike(Card):
         ctx.deal_damage("enemy", 7)  // Deal 7 damage
 ```
 
-### Turn script example
-
-```python
-ctx.playcard()
-ctx.playcard()
-ctx.playcard()
-ctx.set_global("combo", min(ctx.get_global("combo") + 1, 20))
-```
-
-`ctx.playcard()` always plays the **leftmost** card. Hand order is the tactic.
-
-### Effect caps
-
-| Cost | Max effect `P` |
-| --- | --- |
-| 0 | 1.5 |
-| 1 | 2.4 |
-| 2 | 3.2 |
-| 3 | 4.2 |
-| 4 | 5.5 |
-| 5+ | 6.4 |
-
-### Development
-
 ```bash
 npm install
 npm run dev
@@ -1473,43 +1305,11 @@ npm test
 npm run build
 ```
 
-### Architecture
-
-```text
-React + Vite UI
-  → restricted Python lexer/parser
-  → unified IR
-  → abstract interpretation
-  → sandbox interpreter
-  → battle engine
-  → event log
-  → attribution / timeline / quiz / replay
-```
-
-Three.js renders the table, card faces, hand diffing and presentation timeline. Game rules are independent from presentation; skipping animations never changes the result.
-
-### Deployment
-
-GitHub Actions runs tests, builds `dist/`, configures Pages and deploys via `actions/deploy-pages`.
+The full rules, API tables and effect caps are in [README.en.md](README.en.md).
 
 ---
 
-<a id="credits"></a>
-## 23 · 贡献与致谢
-
-### 贡献
-
-- 发现 Bug：请附上种子、牌组、脚本、浏览器版本和复现步骤。
-- 规则建议：请说明它如何影响“写卡 + 调度”两层决策。
-- 平衡数据：欢迎附上批量对局结果或导出的 JSON 日志。
-- UI / 翻译：请保持“引擎内部中文、渲染层翻译”的边界，避免破坏重放签名。
-
-### 致谢
-
-- 规则与引擎灵感来自卡牌游戏、程序合成与沙盒解释器。
-- 视觉语言来自赛博终端、全息投影和故障艺术。
-- README 脚手架来自 [`eli64s/readme-ai`](https://github.com/eli64s/readme-ai)。
-- 所有实际规则、数值、API 和测试以本仓库源码为准。
+有问题或想改规则，直接开 Issue。提交 PR 前请先跑 `npm test` 和 `npm run build`。
 
 ---
 
@@ -1521,6 +1321,6 @@ GitHub Actions runs tests, builds `dist/`, configures Pages and deploys via `act
 
 [▶ PLAY LIVE](https://warpshlczy.github.io/Code-the-Battle/) · [RULES](#rules) · [API](#api) · [ARCHITECTURE](#architecture) · [BACK TO TOP](#top)
 
-<sub>Built with React, TypeScript, Vite, Three.js and Vitest. No backend. No account. No AI code completion.</sub>
+<sub>React + TypeScript + Vite + Three.js + Vitest。纯静态站点，无账号，AI 只做对手。</sub>
 
 </div>
