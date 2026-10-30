@@ -23,9 +23,8 @@
 [![Three.js](https://img.shields.io/badge/Three.js-0.170-000000?logo=three.js&logoColor=white)](https://threejs.org/)
 [![Vitest](https://img.shields.io/badge/Vitest-2.1-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
-`纯前端` · `无账号` · `AI 只做对手` · `代码由你写`
 
-**[中文](README.md) · [English](README.en.md)**
+**[简体中文](README.md) · [English](README.en.md)**
 
 </div>
 
