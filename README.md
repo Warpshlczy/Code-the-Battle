@@ -7,13 +7,11 @@
 
 # CODE THE BATTLE
 
-### 断链协议 · Protocol Breach
+### Protocol Breach
 
-**一个把写代码重新变成战斗的回合制卡牌编程游戏。**
+**A turn-based card game where the cards and the tactics are code you write yourself.**
 
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
-
-**写牌，写战术，打一场。输赢之外，看看代码到底做了什么。**
 
 [![Live demo](https://img.shields.io/badge/PLAY-LIVE-ff5c8a?style=for-the-badge&logo=githubpages&logoColor=white)](https://warpshlczy.github.io/Code-the-Battle/)
 [![Deploy](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Warpshlczy/Code-the-Battle/actions/workflows/deploy.yml)
@@ -23,180 +21,179 @@
 [![Three.js](https://img.shields.io/badge/Three.js-0.170-000000?logo=three.js&logoColor=white)](https://threejs.org/)
 [![Vitest](https://img.shields.io/badge/Vitest-2.1-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
-`纯前端` · `无账号` · `AI 只做对手` · `代码由你写`
+`STATIC` · `NO ACCOUNT` · `AI IS ONLY THE OPPONENT` · `YOUR CODE`
 
-**[中文](README.md) · [English](README.en.md)**
+**[中文](README.zh.md) · English**
 
 </div>
 
 ---
 
-## 目录
+## Contents
 
-- [01 · 这是什么](#what)
-- [02 · 为什么是 Code the Battle](#why)
-- [03 · 功能地图](#features)
-- [04 · 在线试玩](#live)
-- [05 · 本地启动](#start)
-- [06 · 五分钟上手](#quickstart)
-- [07 · 规则手册](#rules)
-- [08 · 写卡指南](#cards)
-- [09 · 回合脚本指南](#scripts)
-- [10 · API 完全手册](#api)
-- [11 · 两套预算：效果上限与算力](#economy)
-- [12 · AI 对手](#ai)
-- [13 · 战后复盘](#report)
-- [14 · 语言](#i18n)
-- [15 · 技术架构](#architecture)
-- [16 · 项目结构](#structure)
-- [17 · 开发、测试与构建](#dev)
-- [18 · 设计取舍与边界](#design)
-- [19 · FAQ](#faq)
-- [20 · English quick start](#english)
+- [01 · What is this](#what)
+- [02 · Why Code the Battle](#why)
+- [03 · Feature map](#features)
+- [04 · Play online](#live)
+- [05 · Run locally](#start)
+- [06 · Five-minute start](#quickstart)
+- [07 · Rules](#rules)
+- [08 · Card guide](#cards)
+- [09 · Turn scripts](#scripts)
+- [10 · API reference](#api)
+- [11 · Two budgets](#economy)
+- [12 · AI opponent](#ai)
+- [13 · Post-battle review](#report)
+- [14 · Language](#i18n)
+- [15 · Architecture](#architecture)
+- [16 · Project layout](#structure)
+- [17 · Development and tests](#dev)
+- [18 · FAQ](#faq)
+- [19 · Quick start](#english)
 
 ---
 
 <a id="what"></a>
-## 01 · 这是什么
+## 01 · What is this
 
-**Code the Battle** 是一个完全运行在浏览器里的单机回合制卡牌编程游戏。
+**Code the Battle** is a single-player, turn-based card game that runs entirely in the browser.
 
-你在构筑阶段亲手写 **5–10 张卡牌**，在对局阶段亲手写 **每一回合的战术脚本**。规则引擎负责静态分析、沙盒执行、伤害结算和日志记录。战后再把整局拆成逐行归因、牌堆回放和读码审讯。
+During deck building you write **5–10 cards**. During the duel you write a **short tactical script every turn**. The rules engine statically analyzes your code, runs it in a sandbox, resolves combat, and records every event. After the battle, the review screen shows which line did what.
 
-对面坐着一台AI驱动的人形支配体。它和你使用同一套费用、能量、牌堆与算力规则，但有自己的牌组；它看不到你的代码，也看不到你的手牌，更不会提前告诉你下一步想做什么。
+Across the table sits an AI-driven humanoid dominator. It follows the same cost caps, Energy, pile and credit rules, with its own deck. It cannot see your code, your hand, or your draw order, and it does not announce its next move.
 
-AI 只当对手。牌和战术都由你写，规则引擎只负责执行和记录。
+The AI is only the opponent. The cards and the tactics are written by you.
 
-游戏只有两层：构筑期写 5–10 张牌，对局期每回合写一段战术。其他功能都围绕这两层转。
+The game has two layers: build 5–10 cards, then write one script per turn. Everything else supports those two layers.
 
-双方 100 HP，每回合 5 能量；脚本共享 14 点算力，卡牌效果由能量付费。规则引擎先静态分析，再在沙盒里执行，最后把每一步写进事件日志。
+Both sides start at 100 HP and get 5 Energy per turn. Turn scripts share 14 credits per turn. Card effects are paid with Energy, not credits.
 
 ---
 
 <a id="why"></a>
-## 02 · 为什么是 Code the Battle
+## 02 · Why Code the Battle
 
-### 2.1 那个所有人都经历过的瞬间
+### 2.1 The moment most of us know
 
-你让 AI 写了一个功能。它跑起来了。
+You ask an AI to write a feature. It runs.
 
-你让它再改改。它也跑起来了。
+You ask it to change something. It still runs.
 
-三天后，你打开文件，发现：
+Three days later you open the file and find:
 
-- 变量名像密码；
-- 注释在解释上一版逻辑；
-- 你知道它“能跑”，但说不清它**为什么能跑**；
-- 你曾经会的语言，变成了一种“只在 review 时见过”的外语。
+- variable names that look like passwords;
+- comments describing the previous version;
+- code that works, but you cannot explain **why** it works;
+- a language you used to know, now reduced to something you only meet during review.
 
-于是就有了这个游戏。
+That is where this game came from.
 
-设计上做了几个取舍：
+A few design choices:
 
-| 普通卡牌游戏 | Code the Battle |
+| Normal card game | Code the Battle |
 | --- | --- |
-| 点一下按钮，卡牌自动结算 | 卡牌效果是你写的一个 `effect(self, ctx)` |
-| 战术靠手速和运气 | 战术靠手牌顺序、资源和脚本 |
-| 卡牌数值由设计师平衡 | 卡牌强度由费用上限和效果预算裁决 |
-| 输了看结算画面 | 输了看逐行归因，知道哪一行害了你 |
-| AI 帮你出牌 / 自动构筑 | AI 只做对手，连你的代码都读不到 |
-| 复盘是统计图表 | 复盘是“读码审讯”，答错会指出证据 |
+| Press a button, the card resolves | The card effect is an `effect(self, ctx)` you wrote |
+| Tactics come from speed and luck | Tactics come from hand order, resources and scripts |
+| Designers balance the numbers | Cost caps and effect budgets decide card strength |
+| Losing shows a result screen | Losing shows line-by-line attribution |
+| AI plays your cards or builds your deck | AI is only the opponent; it cannot read your code |
+| Review is a chart | Review is a code interrogation with evidence |
 
-### 2.2 三条硬规则
+### 2.2 Three hard rules
 
-1. **代码真的在跑。** 你的 `deal_damage` 会经过 IR、抽象解释、沙盒和战斗引擎，最后写进事件日志。动画只是表现，结算不是预设好的。
-2. **AI 看不到你的牌。** 对手只拿公开场面和自己的手牌。卡名、描述、你的手牌、抽牌顺序和代码都不进提示词。
-3. **复盘查得到每一行。** 每次 API 调用都会记录来源、行号、算力、伤害、格挡、治疗和牌堆操作。打完之后，你能看到哪一行代码造成了什么。
+1. **The code really runs.** Your `deal_damage` goes through IR, abstract interpretation, the sandbox and the battle engine, then lands in the event log. Animations are presentation; the result is not pre-scripted.
+2. **The AI cannot see your cards.** It gets the public board and its own hand. Card names, descriptions, your hand, your draw order and your code never enter the prompt.
+3. **The review can trace every line.** Each API call records its source, line number, credits, damage, block, healing and pile operations. After the battle you can see which line caused what.
 
-### 2.3 适合谁
+### 2.3 Who it is for
 
-- 想重新找回“手写逻辑”快感的开发者；
-- 喜欢 Slay the Spire / 炉石 / 万智牌，但想要更深一层程序表达的玩家；
-- 正在学编程，想把变量、循环、条件、函数放进一个**有即时反馈**的场景里的人；
-- 每天和 AI 生成的代码打交道，想确认自己还能从零写出一个能跑的系统的人；
-- 喜欢赛博美术、全息牌桌、电子终端和故障美学的人。
+- Developers who want the feel of hand-written logic again.
+- Players who like Slay the Spire, Hearthstone or Magic, but want a deeper layer of programmatic expression.
+- People learning to code who want variables, loops, conditions and functions in a scene with immediate feedback.
+- Anyone surrounded by AI-generated code who wants to confirm they can still build a working system from scratch.
+- People who like cyber visuals, holographic tables, terminals and glitch aesthetics.
 
 ---
 
 <a id="features"></a>
-## 03 · 功能地图
+## 03 · Feature map
 
-### 3.1 构筑期
+### 3.1 Build phase
 
-- **手写卡牌类**：固定 `name / cost / type / target` 字段，只开放 `effect(self, ctx)`。
-- **实时静态分析**：行数、复杂度、变量数、API 调用、牌堆操作、效果上限 `P`、算力、诊断信息。
-- **费用上限裁决**：费用直接决定效果上限，超过就编译失败。
-- **寄存器编辑**：最多 3 个，支持 `int / bool / enum`，可声明范围。
-- **种子与对手风格**：同一个种子可以复现同一局；战前只披露战斗风格。
-- **卡面画笔**：512×360 画布，笔触大小、调色板、自定义颜色、橡皮、撤销、重做、清空。
-- **卡面预览**：画作进入 DOM 卡面、悬浮提示、弃牌预览和 3D 手牌。
-- **牌组校验**：5–10 张；展示总费用、每张卡的效果上限和诊断。
-- **外接战术（可选）**：填写兼容 `chat/completions` 的端点、模型和 Key；Key 只留在页面内存。
+- **Hand-written card classes.** Fixed `name / cost / type / target` fields; only `effect(self, ctx)` is open.
+- **Live static analysis.** Lines, complexity, variables, API calls, pile operations, effect cap `P`, credits and diagnostics.
+- **Cost caps.** The printed cost sets the effect cap. Going over it fails compilation.
+- **Registers.** Up to 3, typed `int / bool / enum`, with declared ranges.
+- **Seed and opponent style.** The same seed reproduces the same battle. Only the combat style is revealed before the fight.
+- **Card painter.** A 512×360 canvas with brush size, palette, custom colors, eraser, undo, redo and clear.
+- **Card preview.** Art appears in the DOM card face, tooltip, discard preview and 3D hand.
+- **Deck validation.** 5–10 cards; total cost, per-card caps and diagnostics.
+- **Optional external tactics.** Point at a `chat/completions` endpoint with a model and key. The key stays in page memory.
 
-### 3.2 对局期
+### 3.2 Battle phase
 
-- **底部电子终端**：写脚本 → 确认命令 → 回战场 → 执行终端命令；可以反复执行多个指令块。
-- **最左出牌**：`ctx.playcard()` 永远打出最左边那张牌，手牌顺序就是战术。
-- **手牌调度**：`swap` / `move_card` 调整队列；`pile_costs` 读取费用。
-- **能量中断**：能量不够时命令立即中断，弹窗说明需要多少、当前多少，并高亮“跳过回合”。
-- **全息 Three.js 牌桌**：双方抽牌堆 / 手牌 / 弃牌堆常驻显示；牌堆托盘、发光边、张数标签。
-- **出牌动画**：卡牌飞向展示区、翻面、高亮，再落弃牌堆；剩余手牌滑到新位置。
-- **格挡表现**：48px 大号计数器，获得时弹跳发光，被打破时碎裂抖动并飞散护盾碎片。
-- **演出控制**：慢速 / ×2 / ×3 / 跳过；`prefers-reduced-motion` 直接落最终状态。
-- **随时查看牌库**：双方构筑完整卡牌列表；敌方牌库单独放在对手情报里。
+- **Bottom terminal.** Write a script, confirm the command, return to the table, execute it. You can run several chunks in one turn.
+- **Leftmost play.** `ctx.playcard()` always plays the leftmost card. Hand order is the tactic.
+- **Hand scheduling.** `swap` and `move_card` reorder the hand; `pile_costs` reads costs.
+- **Energy interrupt.** If Energy runs out, the command stops and a dialog shows which card needed what.
+- **Three.js table.** Both sides show draw pile, hand and discard, with trays, glowing edges and counts.
+- **Play animation.** Cards fly to the display zone, flip, highlight, then drop into discard. The remaining hand slides into place.
+- **Block feedback.** A large 48px counter pops when block is gained and shatters when it breaks.
+- **Presentation controls.** Slow, ×2, ×3 and skip. `prefers-reduced-motion` jumps to the final state.
+- **Deck viewer.** Inspect both decks; the enemy deck lives in the opponent file.
 
-### 3.3 战后复盘
+### 3.3 Review phase
 
-- **代码账本**：来源、行号、API、算力、伤害、格挡、治疗、牌堆操作。
-- **牌堆回放**：抽牌、弃牌、洗牌、寄存器写入、熔断、AI 动作的时间轴。
-- **读码审讯**：从本局日志生成的单选题；答错会给出证据和解释。
-- **对手档案**：人格、提议次数、回退次数、样本动作和审计记录。
-- **重放校验**：把事件重放成公共状态，校验哈希与资源状态。
-- **导出日志**：JSON 包含种子、结果、回合、牌组预算、AI 审计和全部事件。
+- **Code ledger.** Source, line, API, credits, damage, block, healing and pile operations.
+- **Pile replay.** Draw, discard, shuffle, register writes, halts and AI actions on a timeline.
+- **Code interrogation.** Multiple-choice questions generated from this battle's log, with evidence and explanations when you answer wrong.
+- **Opponent file.** Persona, proposal count, fallback count, sample actions and audit records.
+- **Replay check.** Rebuild public state from events and compare hashes and resources.
+- **JSON export.** Seed, outcome, turns, deck weight, AI audit and every event.
 
-### 3.4 表现与体验
+### 3.4 Presentation
 
-- 动态标题页：扫描线、暗角、全息 SENTINEL 画像、漂浮卡牌数据。
-- 程序化 SVG 美术：竞技场、玩家、敌人、攻击/技能卡面插画。
-- 运行时 Canvas 纹理：牌桌、卡背、卡面、自绘卡画。
-- 响应式相机：竖屏自动拉远，手牌扇形布局保持最左牌清晰。
-- 手牌 mesh 增量对账：出牌、抽牌、弃牌只移动必要的 mesh。
-- 弃牌堆点击展开：可读行、Esc 收起；敌方弃牌可单独靠近浏览。
-- 语言按钮固定在右上角，所有屏幕与弹窗都可见。
+- Animated title screen with scanlines, vignette, a holographic opponent portrait and floating card data.
+- Procedural SVG art for the arena, player, enemy and attack/skill card illustrations.
+- Runtime Canvas textures for the table, card backs, card faces and painted art.
+- A responsive camera that pulls back in portrait while keeping the leftmost card readable.
+- Incremental hand mesh reconciliation: only meshes that change are moved.
+- Click-to-expand discard piles; Esc closes. Enemy discard can be inspected separately.
+- A fixed language button in the top-right corner, visible on every screen and modal.
 
 ---
 
 <a id="live"></a>
-## 04 · 在线试玩
+## 04 · Play online
 
-**Live demo：** https://warpshlczy.github.io/Code-the-Battle/
+**Live demo:** https://warpshlczy.github.io/Code-the-Battle/
 
-- 无需登录，无需下载，纯静态部署。
-- 推荐使用最新版 Chrome / Edge / Firefox / Safari。
-- 需要 WebGL 才能看到 Three.js 牌桌；不支持时仍会显示“3D 场景不可用”的提示。
-- 游戏状态不写入服务器；语言选择保存在浏览器 `localStorage`。
-- 外接 LLM 的 Key 只保存在页面内存，刷新即消失。
+- No login, no download, static hosting only.
+- Use a current Chrome, Edge, Firefox or Safari.
+- WebGL is required for the Three.js table. Without it, the UI shows a "3D scene unavailable" notice.
+- Game state never leaves the browser. The language choice is stored in `localStorage`.
+- An external LLM key stays in page memory and disappears on refresh.
 
-第一次玩的建议：
+First run:
 
-1. 先点 **“查看战斗规则”**，看 30 秒规则简报。
-2. 直接使用默认英文牌组进入构筑，先不要改代码。
-3. 在对局终端点 **“示例”**，确认命令，再执行一次。
-4. 试一次 **“手写排序”**，感受 `pile_costs + swap + playcard` 的差别。
-5. 打完后去复盘页看 **代码账本** 和 **读码审讯**。
+1. Open **View combat rules** and read the 30-second briefing.
+2. Enter the build screen with the default English deck. Do not edit anything yet.
+3. In the battle terminal, press **Example**, confirm the command, then execute it.
+4. Try **Hand sort** once and watch what `pile_costs + swap + playcard` changes.
+5. After the battle, open the code ledger and the code interrogation.
 
 ---
 
 <a id="start"></a>
-## 05 · 本地启动
+## 05 · Run locally
 
-### 5.1 环境要求
+### 5.1 Requirements
 
-- Node.js 20+（建议 22 LTS）
+- Node.js 20+ (22 LTS recommended)
 - npm 10+
-- 现代浏览器（WebGL 2 / Canvas 2D / ES2022）
+- A modern browser with WebGL 2, Canvas 2D and ES2022
 
-### 5.2 安装与运行
+### 5.2 Install and run
 
 ```bash
 git clone https://github.com/Warpshlczy/Code-the-Battle.git
@@ -205,171 +202,171 @@ npm install
 npm run dev
 ```
 
-打开 Vite 输出的地址即可。默认开发服务器绑定 `127.0.0.1`：
+Open the URL printed by Vite. The dev server binds to `127.0.0.1` by default. To expose it:
 
 ```bash
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-### 5.3 构建与预览
+### 5.3 Build and preview
 
 ```bash
 npm run build     # tsc -b && vite build
-npm run preview   # 预览 dist/
+npm run preview   # preview dist/
 ```
 
-`vite.config.ts` 使用 `base: './'`，因此构建产物可以直接放在任意子路径下，适合 GitHub Pages 项目站点。
+`vite.config.ts` uses `base: './'`, so the build works under any sub-path, including a GitHub Pages project site.
 
-### 5.4 测试
+### 5.4 Tests
 
 ```bash
 npm test          # vitest run
 npm run test:watch
 ```
 
-测试覆盖规则、算力、AI、演出、平衡、重放和冒烟流程。当前有 8 个测试文件、53 项测试。
+The suite covers rules, credits, AI, presentation, balance, replay and smoke flows. There are 8 test files and 53 tests.
 
-### 5.5 脚本一览
+### 5.5 Scripts
 
-| 命令 | 作用 |
+| Command | Purpose |
 | --- | --- |
-| `npm run dev` | 启动 Vite 开发服务器 |
-| `npm run build` | TypeScript 项目构建 + Vite 生产构建，产物到 `dist/` |
-| `npm run preview` | 本地预览生产构建 |
-| `npm test` | 运行一次 Vitest |
-| `npm run test:watch` | 监听模式运行 Vitest |
+| `npm run dev` | Start the Vite dev server |
+| `npm run build` | TypeScript build + Vite production build into `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm test` | Run Vitest once |
+| `npm run test:watch` | Run Vitest in watch mode |
 
-### 5.6 发布
+### 5.6 Deploy
 
-推送到 `main` 后，`.github/workflows/deploy.yml` 会安装依赖、跑测试、构建 `dist/`，再发布到 GitHub Pages。线上地址是 https://warpshlczy.github.io/Code-the-Battle/ 。也可以在 Actions 页面手动触发 `workflow_dispatch`。
+Pushing to `main` runs `.github/workflows/deploy.yml`: install dependencies, run tests, build `dist/`, then publish to GitHub Pages. The live site is https://warpshlczy.github.io/Code-the-Battle/ . You can also trigger `workflow_dispatch` from the Actions page.
 
 ---
 
 <a id="quickstart"></a>
-## 06 · 五分钟上手
+## 06 · Five-minute start
 
-### 第 1 步：标题页
+### Step 1: title screen
 
-- 右上角 **EN / 中文** 按钮可以随时切换语言，默认英文。
-- 点 **ENTER THE BUILD** 进入构筑。
-- 点 **View combat rules** 打开规则简报。
+- The **EN / 中文** button in the top-right corner switches language at any time. English is the default.
+- Press **ENTER THE BUILD**.
+- Press **View combat rules** for the briefing.
 
-### 第 2 步：构筑
+### Step 2: build
 
-1. 左侧是卡牌编辑器；默认牌组有 5–10 张示例卡。
-2. 右侧可以编辑寄存器、种子、对手风格和外接战术。
-3. 每张卡会显示效果上限 `P`、算力、诊断和当前费用。
-4. 点卡牌的“卡面”面板，可以用画笔自己画一张卡面。
-5. 所有卡牌通过检查、牌组 5–10 张、寄存器合法后，才能开始对局。
+1. The left side is the card editor. The default deck already has 5–10 sample cards.
+2. The right side edits registers, seed, opponent style and external tactics.
+3. Every card shows effect cap `P`, credits, diagnostics and cost.
+4. Open the **Card face** panel to paint your own art.
+5. Once every card compiles, the deck has 5–10 cards and the registers are valid, you can start.
 
-### 第 3 步：对局
+### Step 3: battle
 
-1. 底部终端默认在 **指令** 页。
-2. 写脚本，或点 **示例 / 手写排序 / 上一回合** 快速载入。
-3. 点 **确认命令**；命令会被按最坏情况锁定。
-4. 回到战场，点 **执行终端命令**。
-5. 可以继续写下一段并再次执行；点 **跳过回合** 才结束自己的回合。
-6. 能量不足时命令会中断，弹窗会说明是哪张牌、需要多少、当前多少。
+1. The bottom terminal starts on the **Commands** tab.
+2. Write a script, or load **Example / Hand sort / Previous turn**.
+3. Press **Confirm command**. The engine locks the worst-case cost.
+4. Return to the table and press **Execute terminal command**.
+5. Run more chunks if you want. Press **Skip turn** to end your turn.
+6. If Energy runs out, the command stops and the dialog explains which card needed how much.
 
-> **关键区别：**“确认命令”只是编译/锁定，不会立即结算；“执行终端命令”才真正跑脚本。
+> **The difference that matters:** Confirm compiles and locks; Execute actually runs the script.
 
-### 第 4 步：复盘
+### Step 4: review
 
-战斗结束后自动进入复盘：
+The review screen opens after the battle:
 
-- **代码账本**：哪一行、哪个 API、多少算力、造成多少伤害；
-- **牌堆回放**：这一局的手牌、抽牌、弃牌、洗牌和寄存器变化；
-- **读码审讯**：回答关于本局代码行为的问题；
-- **对手档案**：查看 SENTINEL 的人格、提议和回退；
-- **重放校验**：验证事件重放后的状态哈希。
+- **Code ledger:** line, API, credits, damage.
+- **Pile replay:** hand, draw, discard, shuffle and register changes.
+- **Code interrogation:** questions about this battle's behavior.
+- **Opponent file:** persona, proposals and fallbacks.
+- **Replay check:** state hash after replaying events.
 
-### 界面语言
+### Language
 
-- 默认英文，首次打开是 English。
-- 右上角 `EN / 中文` 随时切换，不需要刷新。
-- 切换语言会本地化未修改的示例卡牌和默认寄存器；你自己写的卡牌源码不会被改写。
-- 切换只影响显示，不改变对局结果、事件日志或重放签名。
+- English by default on first load.
+- The `EN / 中文` button switches instantly without a refresh.
+- Untouched sample cards and default registers are localized. Your own card source is never rewritten.
+- Switching only changes presentation. It does not change results, event logs or replay signatures.
 
 ---
 
 <a id="rules"></a>
-## 07 · 规则手册
+## 07 · Rules
 
-### 7.1 开局
+### 7.1 Opening
 
-| 规则 | 数值 |
+| Rule | Value |
 | --- | --- |
-| 玩家生命 | 100 |
-| SENTINEL 生命 | 100 |
-| 每回合能量 | 5 |
-| 起手 | 5 张 |
-| 每回合抽至 | 5 张 |
-| 手牌上限 | 10 |
-| 牌组 | 5–10 张 |
-| 回合上限 | 30 |
-| 玩家牌组费用展示 | 所有卡牌费用之和 |
-| 对手牌组 | 独立牌组，沿用同一套费用、能量和牌堆规则 |
+| Player HP | 100 |
+| Opponent HP | 100 |
+| Energy per turn | 5 |
+| Opening hand | 5 cards |
+| Draw per turn | Draw up to 5 cards |
+| Hand limit | 10 |
+| Deck size | 5–10 cards |
+| Turn limit | 30 |
+| Player deck cost display | Sum of all card costs |
+| Opponent deck | Its own deck, under the same cost, Energy and pile rules |
 
-### 7.2 一个回合的固定流程
+### 7.2 Turn flow
 
-1. **回合开始**
-   - 自己上一回合留下的格挡清零（记日志、播放护罩消散）。
-   - 能量重置为 5。
-   - 抽牌至 5 张；抽牌堆为空时自动把弃牌堆洗回。
-2. **战术段**
-   - 你在终端写脚本。
-   - 可以调用出牌、牌堆、只读查询、寄存器写入和资源 API。
-   - 所有脚本调用共享 **14 点算力**。
-3. **出牌**
-   - `ctx.playcard()` 永远只打手牌最左第 1 张。
-   - 只有能量足够才结算。
-   - 卡牌效果由能量付费，**不重复扣脚本算力**。
-4. **寄存器**
-   - `set_global()` 立即写入并校验范围；不做回合末批量提交。
-5. **回合结束**
-   - 所有剩余手牌进入弃牌堆（记日志、播放飞牌动画）。
-6. **敌方回合**
-   - SENTINEL 使用同一套能量、牌堆和算力规则。
-   - 它只看公开场面和自己的手牌；结束后同样弃光手牌。
-7. **兜底**
-   - 任意一方生命归零立即结束。
-   - 30 回合后按双方剩余生命比例判定。
+1. **Turn start**
+   - Block left from your previous turn clears (logged, with a shield dissolve cue).
+   - Energy resets to 5.
+   - Draw to 5 cards; if the draw pile is empty, shuffle the discard pile back.
+2. **Tactics**
+   - Write a script in the terminal.
+   - You can call play, pile, read, register and resource APIs.
+   - All script calls share **14 credits**.
+3. **Playing cards**
+   - `ctx.playcard()` always plays the leftmost card.
+   - It resolves only if you have enough Energy.
+   - Card effects are paid with Energy and do **not** consume script credits again.
+4. **Registers**
+   - `set_global()` writes and validates immediately. There is no end-of-turn batch commit.
+5. **Turn end**
+   - All remaining hand cards go to the discard pile (logged, with a fly-to-discard animation).
+6. **Opponent turn**
+   - The opponent uses the same Energy, pile and credit rules.
+   - It sees only the public board and its own hand. It also discards its whole hand at the end.
+7. **Ending**
+   - If either side reaches 0 HP, the battle ends immediately.
+   - After 30 turns, the remaining HP ratio decides.
 
-### 7.3 伤害、格挡与治疗
+### 7.3 Damage, block and healing
 
-- **格挡没有上限**，但**只持续一回合**：自己的下个回合开始时清零。
-- 伤害先扣格挡，再扣生命。
-- 治疗不能超过生命上限。
-- 自伤 `ctx.deal_damage("self", n)` 会按负面效果抵扣一部分净效果。
-- 卡牌效果、脚本、AI 使用同一套结算逻辑。
+- **Block has no cap**, but it **lasts one round**: it clears at the start of your own next turn.
+- Damage hits Block first, then HP.
+- Healing cannot exceed max HP.
+- Self-damage `ctx.deal_damage("self", n)` counts as a negative effect and discounts part of the net effect.
+- Card effects, scripts and AI all use the same resolution logic.
 
-### 7.4 牌组
+### 7.4 Deck
 
-- 必须 **5–10 张**，最多 10 张。
-- 没有牌组预算，没有同名数量限制。
-- 同名牌可以重复；卡面会按 uid 区分，重复同名不会串脸。
-- 牌组里的顺序不直接决定起手；抽牌由固定种子 RNG 决定。
-- 构筑界面会展示总费用和每张卡的效果上限。
+- **5–10 cards**, hard cap 10.
+- No deck budget and no copy limit.
+- Duplicate names are allowed; card faces are distinguished by uid, so duplicates do not share art.
+- Deck order does not decide the opening hand; a fixed-seed RNG draws.
+- The build screen shows total cost and every card's effect cap.
 
-### 7.5 手牌与牌堆
+### 7.5 Hand and piles
 
-- 双方各有 **抽牌堆 / 手牌 / 弃牌堆**。
-- 我方手牌可见，敌方手牌始终是卡背。
-- 抽牌堆显示卡背与张数；弃牌堆公开牌面。
-- 手牌最左是下一个出牌位；`swap` / `move_card` 可以改变顺序。
-- 回合结束时整手牌进入弃牌堆，不会保留到下一回合。
+- Each side has a **draw pile / hand / discard pile**.
+- Your hand is visible. The opponent's hand is always card backs.
+- Draw piles show card backs and counts. Discards are public.
+- The leftmost card is the next card played; `swap` and `move_card` can change the order.
+- At turn end the whole hand goes to discard. Nothing carries over.
 
-### 7.6 寄存器
+### 7.6 Registers
 
-- 最多 **3 个**。
-- 类型：`int` / `bool` / `enum`。
-- `int` 必须声明 `min / max`，跨度不超过 1000。
-- `enum` 支持 1–8 个值。
-- `set_global()` 只能在回合脚本中使用，立即生效。
-- `get_global()` 卡牌效果和脚本都能读取。
-- 寄存器不跨局保留。
+- Up to **3**.
+- Types: `int` / `bool` / `enum`.
+- `int` requires `min / max`; the span cannot exceed 1000.
+- `enum` supports 1–8 values.
+- `set_global()` works only in turn scripts and applies immediately.
+- `get_global()` works in both card effects and scripts.
+- Registers do not persist across battles.
 
-默认英文寄存器：
+Default English registers:
 
 ```python
 combo : int  = 0      # 0..20
@@ -377,7 +374,7 @@ guard : bool = false
 mode  : enum = "idle" # idle / assault / hold
 ```
 
-默认中文寄存器仍保留在源码中，供测试与中文界面使用：
+The default Chinese registers remain in the source for tests and the Chinese UI:
 
 ```python
 combo : int  = 0      # 0..20
@@ -385,46 +382,46 @@ guard : bool = false
 mode  : enum = "默认" # 默认 / 强攻 / 蛰伏
 ```
 
-### 7.7 胜负
+### 7.7 Win and loss
 
-- 敌方生命归零 → **协议突破 / victory**。
-- 我方生命归零 → **链路中断 / defeat**。
-- 30 回合仍未分胜负 → 按剩余生命比例判定。
-- 退出对局不会生成复盘记录。
+- Opponent at 0 HP → **Protocol breached** (victory).
+- You at 0 HP → **Link severed** (defeat).
+- After 30 turns, the remaining HP ratio decides.
+- Quitting a battle does not create a review record.
 
-### 7.8 确定性
+### 7.8 Determinism
 
-- 同一牌组 + 同一寄存器 + 同一脚本 + 同一种子 + 录制下来的 AI 动作 = 可重放。
-- 游戏使用固定种子 RNG；AI 的随机性也走同一 RNG。
-- 外接 LLM 对手的提议会被记录；重放使用录制的动作，不重新请求模型。
+- Same deck + same registers + same scripts + same seed + recorded AI actions = replayable.
+- The game uses a fixed-seed RNG. AI randomness uses the same RNG.
+- External LLM proposals are recorded. Replays consume recorded actions and never call the model again.
 
-### 7.9 硬限制
+### 7.9 Hard limits
 
-| 限制 | 卡牌 `effect` | 回合脚本 |
+| Limit | Card `effect` | Turn script |
 | --- | --- | --- |
-| 最大行数 | 20 | 20 |
-| 最大复杂度 | 80 | 60 |
-| 辅助函数 | 最多 3 个 | 最多 3 个 |
-| 每个辅助函数 | 30 行 / 120 复杂度 | 30 行 / 120 复杂度 |
-| 单行字符 | 200 | 200 |
-| 最大变量 | 10 | 10 |
-| 最大列表 | 8 | 8 |
-| 最大嵌套 | 4 | 4 |
-| 最大循环深度 | 2 | 2 |
-| 单层循环上界 | 10 | 10 |
-| 总迭代上限 | 96 | 120 |
-| 列表写入 | 64 | 64 |
-| 调用深度 | 3 | 3 |
-| 执行时间熔断 | — | 140ms |
+| Max lines | 20 | 20 |
+| Max complexity | 80 | 60 |
+| Helper functions | 3 | 3 |
+| Per helper | 30 lines / 120 complexity | 30 lines / 120 complexity |
+| Characters per line | 200 | 200 |
+| Variables | 10 | 10 |
+| List length | 8 | 8 |
+| Nesting | 4 | 4 |
+| Loop depth | 2 | 2 |
+| Loop bound | 10 | 10 |
+| Total iterations | 96 | 120 |
+| List writes | 64 | 64 |
+| Call depth | 3 | 3 |
+| Execution timeout | — | 140ms |
 
-编辑器在写超限时会**硬停**，粘贴也无法绕过。循环上界说不清、递归、`eval`、文件、网络、反射都不会通过编译。
+The editor hard-stops when you cross a limit; pasting code does not bypass it. Loops with unprovable bounds, recursion, `eval`, file access, network access and reflection all fail compilation.
 
 ---
 
 <a id="cards"></a>
-## 08 · 写卡指南
+## 08 · Card guide
 
-### 8.1 最小卡牌
+### 8.1 Smallest card
 
 ```python
 class DirectStrike(Card):
@@ -437,51 +434,51 @@ class DirectStrike(Card):
         ctx.deal_damage("enemy", 7)  // Deal 7 damage
 ```
 
-这张卡：
+This card:
 
-- 费用 1；
-- 效果上限 2.4；
-- 造成 7 点伤害（在脚本预算体系里是另一套账）；
-- 行尾 `//` 注释会成为卡面说明；
-- 进入 3D 牌桌时会使用玩家选择的卡面。
+- costs 1;
+- has an effect cap of 2.4;
+- deals 7 damage (paid with Energy, separate from script credits);
+- uses the trailing `//` comment as its description;
+- carries the player's chosen art onto the 3D table.
 
-### 8.2 固定字段
+### 8.2 Fixed fields
 
-| 字段 | 允许值 | 说明 |
+| Field | Allowed value | Notes |
 | --- | --- | --- |
-| `name` | 字符串 | 卡名，显示在卡面与日志 |
-| `cost` | 整数 | 决定效果上限 `P` |
-| `type` | `attack` / `skill` | 只允许两种 |
-| `target` | `enemy` / `self` / `none` | 只允许三种 |
-| `effect(self, ctx)` | 函数 | 唯一开放的效果入口 |
+| `name` | string | Shown on the card face and in logs |
+| `cost` | integer | Sets effect cap `P` |
+| `type` | `attack` / `skill` | Only these two |
+| `target` | `enemy` / `self` / `none` | Only these three |
+| `effect(self, ctx)` | function | The only open effect entry |
 
-不支持状态系统、稀有度、卡牌生成/删除 API、任意代码执行、文件/网络/反射/`eval`、直接修改牌堆内部数组、跨局寄存器或自定义结算顺序。
+There is no status system, rarity, card generation/removal API, arbitrary code execution, file/network/reflection/`eval`, direct pile array access, cross-battle registers or custom resolution order.
 
-### 8.3 费用决定效果上限
+### 8.3 Cost sets the effect cap
 
-| 费用 | 效果上限 `P` |
+| Cost | Effect cap `P` |
 | --- | --- |
 | 0 | 1.5 |
 | 1 | 2.4 |
 | 2 | 3.2 |
 | 3 | 4.2 |
 | 4 | 5.5 |
-| 5 及以上 | 6.4 |
+| 5+ | 6.4 |
 
-规则：
+Rules:
 
-- 超过上限直接编译失败，并指出超出的行。
-- 0 费卡禁止 `gain_energy()`。
-- 负面效果可以抵扣一部分净效果：
-  - `deal_damage("self", n)`；
-  - `discard(n)`；
-  - `lose_energy(n)`。
-- 没有单次伤害/治疗/格挡/抽牌/回能上限；真正的上限来自费用、效果预算和算力。
-- 表达式本身也计费：运算符、变量、嵌套越多，构筑期成本越高，防止 `((2+3)*5)` 这种写法隐藏强度。
+- Over the cap fails compilation and points at the offending line.
+- 0-cost cards cannot use `gain_energy()`.
+- Negative effects discount part of the net effect:
+  - `deal_damage("self", n)`;
+  - `discard(n)`;
+  - `lose_energy(n)`.
+- There is no per-cast cap on damage, healing, block, draw or energy gain. Cost, effect budget and credits are the real limits.
+- Expressions are priced too: more operators, variables and nesting means a higher build-time cost, so `((2+3)*5)` cannot hide strength.
 
-### 8.4 卡面说明
+### 8.4 Card descriptions
 
-`def effect` 里的 `//` 注释会成为卡面描述，多行用 ` · ` 连接：
+`//` comments inside `def effect` become the card description. Multiple lines are joined with ` · `:
 
 ```python
 def effect(self, ctx):
@@ -489,20 +486,20 @@ def effect(self, ctx):
     ctx.gain_block(2)            // Gain 2 Block this turn
 ```
 
-### 8.5 卡面画笔
+### 8.5 Card painter
 
-构筑期“卡面”面板提供：
+The build-phase **Card face** panel gives you:
 
-- 512×360 画布；
-- 笔触大小 1–12；
-- 8 个预设颜色 + 自定义颜色；
-- 橡皮、撤销、重做、清空；
-- 边框色、底色和标记作为底层外观；
-- 画作会进入 DOM 预览、悬浮提示、弃牌预览与 3D 手牌。
+- a 512×360 canvas;
+- brush sizes 1–12;
+- 8 preset colors plus a custom color;
+- eraser, undo, redo and clear;
+- border, background and marks as the base look;
+- art in the DOM preview, tooltip, discard preview and 3D hand.
 
-画作只保存在本次构筑会话，不写入后端，也不跨局持久化。
+Art lives only in the current build session. It is not sent to a backend and does not persist across battles.
 
-### 8.6 示例：自伤换伤害
+### 8.6 Example: self-damage for more damage
 
 ```python
 class OverloadSlash(Card):
@@ -516,9 +513,9 @@ class OverloadSlash(Card):
         ctx.deal_damage("self", 2)   // Take 2 self-damage; it discounts the effect
 ```
 
-注意：自伤不是“免费加数值”。它会进入负面效果抵扣，降低净效果，也会在卡面统计和效果上限里体现。
+Self-damage is not free stats. It enters the negative-effect discount, lowers the net effect, and shows up in card stats and the effect cap.
 
-### 8.7 示例：0 费卡
+### 8.7 Example: 0-cost card
 
 ```python
 class GlimmerPulse(Card):
@@ -531,28 +528,28 @@ class GlimmerPulse(Card):
         ctx.deal_damage("enemy", 2)  // 0 cost: effect cap is 1.5
 ```
 
-0 费卡的上限是 1.5，不能靠 `gain_energy()` 变成“免费引擎”。
+A 0-cost card caps at 1.5. It cannot turn into a free engine through `gain_energy()`.
 
-### 8.8 常见编译失败
+### 8.8 Common compile failures
 
-| 现象 | 原因 |
+| Symptom | Cause |
 | --- | --- |
-| 效果超出费用上限 | 减少数值、拆成多张卡或加负面效果 |
-| 0 费卡使用 `gain_energy` | 规则禁止 |
-| 循环上界无法证明 | 用固定 `range()` 或直接写语句 |
-| 递归 / `eval` / 文件 / 网络 | 沙盒白名单拒绝 |
-| 行数或复杂度超限 | 编辑器硬停，拆函数或简化逻辑 |
-| `set_global` 名字不是字面量 | 寄存器名必须写成字符串常量 |
-| 寄存器越界 | 检查声明范围与实际写入值 |
+| Effect over the cost cap | Lower the numbers, split into several cards, or add a negative effect |
+| 0-cost card uses `gain_energy` | Forbidden by the rules |
+| Loop bound cannot be proven | Use a fixed `range()` or write the statements directly |
+| Recursion / `eval` / file / network | Rejected by the sandbox allowlist |
+| Line or complexity limit | The editor hard-stops; split helpers or simplify |
+| `set_global` name is not a literal | Register names must be string constants |
+| Register out of range | Check the declared range and the written value |
 
 ---
 
 <a id="scripts"></a>
-## 09 · 回合脚本指南
+## 09 · Turn scripts
 
-### 9.1 脚本不是卡牌类
+### 9.1 Scripts are not card classes
 
-回合脚本直接写语句，不需要 `class`：
+A turn script is plain statements. No `class`:
 
 ```python
 ctx.playcard()
@@ -562,26 +559,26 @@ ctx.playcard()
 ctx.set_global("combo", min(ctx.get_global("combo") + 1, 20))
 ```
 
-### 9.2 执行模型
+### 9.2 Execution model
 
-- 每回合脚本共享 **14 点算力**。
-- 卡牌效果由能量付费，不重复扣算力。
-- 点“确认命令”时，引擎按**最坏情况**估算并锁定。
-- 点“执行终端命令”时才真正运行。
-- 可以连续执行多个指令块，花费累计。
-- 运行时还有迭代、时间、列表写入和字符串长度的熔断。
-- 能量不足时中断会保留已经执行的动作；修正后可以重新提交。
+- Every turn shares **14 credits**.
+- Card effects are paid with Energy and do not consume credits again.
+- **Confirm command** estimates and locks the worst case.
+- **Execute terminal command** actually runs the script.
+- You can run several chunks; costs accumulate.
+- Runtime fuses cover iterations, time, list writes and string length.
+- An Energy interrupt keeps the actions already executed; fix the script and submit again.
 
-### 9.3 手牌顺序就是战术
+### 9.3 Hand order is the tactic
 
-`ctx.playcard()` 永远打最左牌。所以：
+`ctx.playcard()` always plays the leftmost card. So:
 
-- 想把大伤害先打出去 → 用 `swap` / `move_card` 调整顺序；
-- 想先架格挡 → 把格挡牌移到最左；
-- 想先抽牌 → 先调度抽牌卡；
-- 想保留某张牌 → 不要把它放在最左。
+- want big damage first → reorder with `swap` / `move_card`;
+- want block first → move the block card to the left;
+- want draw first → schedule the draw card first;
+- want to keep a card → do not put it on the left.
 
-示例：一轮冒泡排序
+Example: one bubble-sort pass
 
 ```python
 costs = ctx.pile_costs("hand")
@@ -593,41 +590,41 @@ ctx.playcard()
 ctx.playcard()
 ```
 
-这段脚本做三件事：
+This script:
 
-1. 读取手牌费用；
-2. 做一轮局部排序，把更贵的牌往左推；
-3. 打出三张，优先让高费牌落地。
+1. reads hand costs;
+2. does one local sort pass, pushing more expensive cards left;
+3. plays three cards, prioritizing high-cost cards.
 
-### 9.4 脚本与卡牌的区别
+### 9.4 Cards vs scripts
 
-| 维度 | 卡牌效果 | 回合脚本 |
+| Dimension | Card effect | Turn script |
 | --- | --- | --- |
-| 入口 | `effect(self, ctx)` | 直接写语句 |
-| 付费 | 能量 | 算力 |
-| 预算 | 费用对应的效果上限 `P` | 每回合 14 点算力 |
-| 运行时机 | 打出时 | 点击“执行终端命令”时 |
-| 可以 `playcard` | 否 | 是 |
-| 可以 `set_global` | 否 | 是 |
-| 可以读取全局 | 是 | 是 |
-| 是否参与重放 | 是 | 是 |
+| Entry | `effect(self, ctx)` | plain statements |
+| Paid with | Energy | Credits |
+| Budget | Cost-based effect cap `P` | 14 credits per turn |
+| Runs when | The card is played | You press Execute |
+| Can `playcard` | No | Yes |
+| Can `set_global` | No | Yes |
+| Can read globals | Yes | Yes |
+| Participates in replay | Yes | Yes |
 
-### 9.5 被锁死的反例
+### 9.5 A locked example
 
 ```python
 ctx.deal_damage("enemy", 10 * ctx.getTurn())
 ```
 
-这会把最坏情况推得很高。抽象解释按上界估算，一旦超过 14 点算力，确认命令就会失败。
+This pushes the worst case very high. Abstract interpretation estimates the upper bound; if it exceeds 14 credits, Confirm fails.
 
-正确思路：
+Better approaches:
 
-- 用读取和调度降低不确定性；
-- 用固定小数值多次结算；
-- 用寄存器保存状态，而不是每次重新读一大堆数据；
-- 用循环压缩重复语句，但记住循环体成本会乘以迭代上界。
+- use reads and scheduling to reduce uncertainty;
+- resolve several fixed, smaller effects;
+- store state in registers instead of re-reading a lot of data;
+- compress repeated statements with loops, remembering that the body cost multiplies by the iteration bound.
 
-### 9.6 寄存器脚本
+### 9.6 Register script
 
 ```python
 mode = ctx.get_global("mode")
@@ -639,33 +636,33 @@ else:
 ctx.set_global("combo", min(ctx.get_global("combo") + 1, 20))
 ```
 
-`set_global` 立即生效；同一段脚本后续读取会拿到新值。
+`set_global` applies immediately; later reads in the same script see the new value.
 
 ---
 
 <a id="api"></a>
-## 10 · API 完全手册
+## 10 · API reference
 
-### 10.0 约定
+### 10.0 Conventions
 
-- 所有调用都挂在 `ctx` 上。
-- `scope`：
-  - **both** = 卡牌效果和回合脚本都能用；
-  - **script** = 只能在回合脚本里用。
-- 表中的价格是**脚本算力价格**，不是构筑期效果上限 `P`。
-- 实际算力还会叠加表达式、循环、条件和嵌套成本，所以 UI 显示的总价可能高于 API 基础价。
-- 牌堆参数只能是 `"draw"` / `"hand"` / `"discard"`。
-- 伤害目标只能是 `"enemy"` / `"self"`。
+- All calls live on `ctx`.
+- `scope`:
+  - **both** = card effects and turn scripts;
+  - **script** = turn scripts only.
+- Prices below are **script credit prices**, not the build-time effect cap `P`.
+- Actual credits also include expressions, loops, conditions and nesting, so the UI total can be higher than the base API price.
+- Pile arguments are `"draw"`, `"hand"` or `"discard"`.
+- Damage targets are `"enemy"` or `"self"`.
 
-### 10.1 出牌与调度
+### 10.1 Play and scheduling
 
-| 签名 | 作用域 | 返回 | 基础算力 | 说明 |
+| Signature | Scope | Returns | Base credits | Notes |
 | --- | --- | --- | --- | --- |
-| `ctx.playcard()` | script | bool | 0.8 | 打出最左手牌；只花能量，不读取手牌内容 |
-| `ctx.swap(pile, i, j)` | both | none | 0.3 | 交换同一牌堆里的两张牌 |
-| `ctx.move_card(from, fi, to, ti)` | both | none | 0.5 | 把一张牌从任意牌堆移到另一个牌堆的指定位置 |
+| `ctx.playcard()` | script | bool | 0.8 | Plays the leftmost card; spends Energy only, does not read hand contents |
+| `ctx.swap(pile, i, j)` | both | none | 0.3 | Swaps two cards in one pile |
+| `ctx.move_card(from, fi, to, ti)` | both | none | 0.5 | Moves a card from any pile to a position in another pile |
 
-示例：
+Example:
 
 ```python
 ctx.swap("hand", 0, 1)
@@ -673,79 +670,79 @@ ctx.move_card("draw", 0, "hand", 0)
 ctx.playcard()
 ```
 
-### 10.2 抽牌、弃牌与牌堆
+### 10.2 Draw, discard and piles
 
-| 签名 | 作用域 | 返回 | 算力公式 | 说明 |
+| Signature | Scope | Returns | Credit formula | Notes |
 | --- | --- | --- | --- | --- |
-| `ctx.draw(n)` | both | int | `1.5 + 0.9n + 0.04n²` | 抽 n 张；抽牌堆空时自动洗回弃牌堆 |
-| `ctx.discard(n)` | both | int | `1.2 + 0.7n` | 弃掉最左边 n 张手牌；负面效果 |
-| `ctx.shuffle()` | both | none | `2.5` | 按本局种子重洗抽牌堆 |
-| `ctx.reshuffle()` | both | int | `3` | 把弃牌堆洗回抽牌堆，满时停止 |
-| `ctx.pile_costs(pile)` | both | intlist | `0.3 + 0.08n` | 读取一个牌堆里每张牌的费用 |
-| `ctx.hand_size()` | both | int | `0.1 + 0.06n` | 读取手牌数量 |
-| `ctx.draw_size()` | both | int | `0.1 + 0.06n` | 读取抽牌堆数量 |
-| `ctx.discard_size()` | both | int | `0.1 + 0.06n` | 读取弃牌堆数量 |
-| `ctx.getHand()` | both | cardlist | `0.4 + 0.12n` | 手牌只读快照 |
-| `ctx.getDraw()` | both | cardlist | `0.4 + 0.12n` | 抽牌堆只读快照 |
-| `ctx.getDiscard()` | both | cardlist | `0.4 + 0.12n` | 弃牌堆只读快照 |
+| `ctx.draw(n)` | both | int | `1.5 + 0.9n + 0.04n²` | Draw n; if the draw pile is empty, shuffle discard back |
+| `ctx.discard(n)` | both | int | `1.2 + 0.7n` | Discard the leftmost n hand cards; negative effect |
+| `ctx.shuffle()` | both | none | `2.5` | Shuffle the draw pile with this battle's seed |
+| `ctx.reshuffle()` | both | int | `3` | Shuffle discard back into draw, stopping when full |
+| `ctx.pile_costs(pile)` | both | intlist | `0.3 + 0.08n` | Read every card cost in a pile |
+| `ctx.hand_size()` | both | int | `0.1 + 0.06n` | Read hand size |
+| `ctx.draw_size()` | both | int | `0.1 + 0.06n` | Read draw pile size |
+| `ctx.discard_size()` | both | int | `0.1 + 0.06n` | Read discard pile size |
+| `ctx.getHand()` | both | cardlist | `0.4 + 0.12n` | Read-only hand snapshot |
+| `ctx.getDraw()` | both | cardlist | `0.4 + 0.12n` | Read-only draw pile snapshot |
+| `ctx.getDiscard()` | both | cardlist | `0.4 + 0.12n` | Read-only discard snapshot |
 
-说明：
+Notes:
 
-- `getHand / getDraw / getDiscard` 返回的卡牌快照包含名称、费用、类型、目标。
-- 不能直接访问 `ctx.hand` / `ctx.draw_pile` / `ctx.discard_pile` 的内部数组。
-- `discard` 是负面效果，可用于抵扣部分净效果。
+- `getHand / getDraw / getDiscard` snapshots include name, cost, type and target.
+- You cannot access `ctx.hand`, `ctx.draw_pile` or `ctx.discard_pile` internal arrays.
+- `discard` is a negative effect and can discount part of the net effect.
 
-### 10.3 战斗与资源
+### 10.3 Combat and resources
 
-| 签名 | 作用域 | 返回 | 算力公式 | 说明 |
+| Signature | Scope | Returns | Credit formula | Notes |
 | --- | --- | --- | --- | --- |
-| `ctx.deal_damage(target, a)` | both | int | `4 + 1.2a + 0.12a²` | 伤害；先扣格挡再扣生命 |
-| `ctx.gain_block(a)` | both | none | `5 + 1.5a + 0.25a²` | 获得格挡，持续到自己的下个回合开始 |
-| `ctx.heal(a)` | both | none | `4 + 2a + 0.2a²` | 回复生命，不超过上限 |
-| `ctx.gain_energy(a)` | both | none | `14 + 8a` | 立即获得能量；很贵，0 费卡禁止 |
-| `ctx.lose_energy(a)` | both | none | `1 + 0.8a` | 失去能量，不低于 0；负面效果 |
-| `ctx.random_int(min, max)` | both | int | `2 + 0.4×span` | 固定种子随机整数，可重放 |
-| `ctx.log(message)` | both | none | `0.2` | 写入战斗记录，供逐行复盘 |
+| `ctx.deal_damage(target, a)` | both | int | `4 + 1.2a + 0.12a²` | Damage; block first, then HP |
+| `ctx.gain_block(a)` | both | none | `5 + 1.5a + 0.25a²` | Gain block until your next turn start |
+| `ctx.heal(a)` | both | none | `4 + 2a + 0.2a²` | Heal up to max HP |
+| `ctx.gain_energy(a)` | both | none | `14 + 8a` | Gain Energy immediately; expensive and forbidden on 0-cost cards |
+| `ctx.lose_energy(a)` | both | none | `1 + 0.8a` | Lose Energy, minimum 0; negative effect |
+| `ctx.random_int(min, max)` | both | int | `2 + 0.4×span` | Fixed-seed random integer, replayable |
+| `ctx.log(message)` | both | none | `0.2` | Write a battle log entry for line-level review |
 
-`span = max - min`，且 `min >= 0`。
+`span = max - min`, and `min >= 0`.
 
-### 10.4 只读查询
+### 10.4 Read-only queries
 
-| 签名 | 作用域 | 返回 | 算力公式 | 说明 |
+| Signature | Scope | Returns | Credit formula | Notes |
 | --- | --- | --- | --- | --- |
-| `ctx.getTurn()` | both | int | `0.1 + 0.03n` | 当前回合数 |
-| `ctx.getEnergy()` | both | int | `0.1 + 0.04n` | 当前能量 |
-| `ctx.getBlock()` | both | int | `0.1 + 0.02n` | 当前格挡 |
-| `ctx.getMaxEnergy()` | both | int | `0.1 + 0.04n` | 每回合能量上限 |
-| `ctx.getHandLimit()` | both | int | `0.1 + 0.06n` | 手牌上限 |
-| `ctx.getDrawLimit()` | both | int | `0.1 + 0.06n` | 抽牌堆上限 |
-| `ctx.enemy.hp()` | both | int | `0.1 + 0.015×HP` | 对手当前生命 |
-| `ctx.enemy.block()` | both | int | `0.1 + 0.02×Block` | 对手当前格挡 |
-| `ctx.get_global(name)` | both | str / int / bool | `0.15 + 0.05n` | 读取寄存器 |
+| `ctx.getTurn()` | both | int | `0.1 + 0.03n` | Current turn |
+| `ctx.getEnergy()` | both | int | `0.1 + 0.04n` | Current Energy |
+| `ctx.getBlock()` | both | int | `0.1 + 0.02n` | Current Block |
+| `ctx.getMaxEnergy()` | both | int | `0.1 + 0.04n` | Energy per turn |
+| `ctx.getHandLimit()` | both | int | `0.1 + 0.06n` | Hand limit |
+| `ctx.getDrawLimit()` | both | int | `0.1 + 0.06n` | Draw pile limit |
+| `ctx.enemy.hp()` | both | int | `0.1 + 0.015×HP` | Opponent HP |
+| `ctx.enemy.block()` | both | int | `0.1 + 0.02×Block` | Opponent Block |
+| `ctx.get_global(name)` | both | str / int / bool | `0.15 + 0.05n` | Read a register |
 
-### 10.5 寄存器、随机与日志
+### 10.5 Registers, random and logs
 
-| 签名 | 作用域 | 返回 | 算力 | 说明 |
+| Signature | Scope | Returns | Credits | Notes |
 | --- | --- | --- | --- | --- |
-| `ctx.set_global(name, value)` | script | none | `0.6` | 写入寄存器；名字必须是字符串字面量 |
-| `ctx.get_global(name)` | both | 寄存器类型 | `0.15 + 0.05n` | 读取寄存器 |
-| `ctx.random_int(min, max)` | both | int | `2 + 0.4×span` | 固定种子随机 |
-| `ctx.log(message)` | both | none | `0.2` | 玩家日志 |
+| `ctx.set_global(name, value)` | script | none | `0.6` | Write a register; the name must be a string literal |
+| `ctx.get_global(name)` | both | register type | `0.15 + 0.05n` | Read a register |
+| `ctx.random_int(min, max)` | both | int | `2 + 0.4×span` | Fixed-seed random |
+| `ctx.log(message)` | both | none | `0.2` | Player log entry |
 
-### 10.6 快照字段
+### 10.6 Snapshot fields
 
-| 表达式 | 作用域 | 返回 | 说明 |
+| Expression | Scope | Returns | Notes |
 | --- | --- | --- | --- |
-| `ctx.turn.played_count` | both | int | 本回合已出牌次数 |
-| `ctx.turn.discarded_count` | both | int | 本回合已弃牌次数 |
-| `card.name` | both | str | 卡牌快照名称 |
-| `card.cost` | both | int | 卡牌快照费用 |
+| `ctx.turn.played_count` | both | int | Cards played this turn |
+| `ctx.turn.discarded_count` | both | int | Cards discarded this turn |
+| `card.name` | both | str | Snapshot card name |
+| `card.cost` | both | int | Snapshot card cost |
 | `card.type` | both | str | `attack` / `skill` |
 | `card.target` | both | str | `enemy` / `self` / `none` |
 
-`ctx.turn` 字段读取按固定读取计价；`card.*` 只存在于 `getHand / getDraw / getDiscard` 返回的列表元素里。
+`ctx.turn` fields use fixed read pricing; `card.*` exists only on elements returned by `getHand / getDraw / getDiscard`.
 
-### 10.7 不建议的写法
+### 10.7 Discouraged patterns
 
 ```python
 ctx.deal_damage("enemy", ctx.getTurn() * 10)
@@ -753,169 +750,167 @@ ctx.draw(8)
 ctx.gain_energy(3)
 ```
 
-这些写法能用，但代价很高：
+These are legal, but expensive:
 
-- 抽象解释会按上界估算；
-- 平方项会惩罚大数值；
-- 一旦最坏情况超过 14 点算力，就会在“确认命令”时失败；
-- 运行时还有 140ms 熔断和迭代上限。
+- abstract interpretation estimates the upper bound;
+- quadratic terms punish large values;
+- if the worst case exceeds 14 credits, Confirm fails;
+- at runtime there is a 140ms timeout and an iteration cap.
 
 ---
 
 <a id="economy"></a>
-## 11 · 两套预算：效果上限与算力
+## 11 · Two budgets
 
-卡牌和脚本按两套预算结算。卡牌看费用，脚本看每回合 14 点算力。
+Cards and scripts use separate budgets. Cards are limited by cost; scripts share 14 credits per turn.
 
-### 11.1 构筑期：效果上限 `P`
+### 11.1 Build phase: effect cap `P`
 
-- 只计算卡牌 `effect` 的效果上限。
-- 费用决定上限。
-- 展示每个 API 的“效果值”和每张卡当前 `P`。
-- 超过上限 → 编译失败。
-- 负面效果抵扣净效果。
+- Only the card's `effect` is measured.
+- Cost sets the cap.
+- The UI shows each API's effect value and the card's current `P`.
+- Over the cap fails compilation.
+- Negative effects discount the net effect.
 
-### 11.2 对局期：算力 `Credits`
+### 11.2 Battle phase: credits
 
-- 只计算回合脚本的算力。
-- 每回合共享 14 点。
-- 展示脚本算力、运行时算力和每条 API 的公式。
-- 卡牌效果不重复扣算力，只花能量。
-- 确认命令时按最坏情况锁定；运行时再次兜底。
+- Only turn scripts are measured.
+- Each turn shares 14 credits.
+- The UI shows script credits, runtime credits and every API formula.
+- Card effects do not consume credits again; they spend Energy.
+- Confirm locks the worst case; runtime checks it again.
 
-### 11.3 为什么分开算
+### 11.3 Why separate
 
-只用费用限制卡牌，脚本可以无限调度，手牌顺序就没意义了。只用算力限制脚本，卡牌可以无限强，费用就成了装饰。两套混在一起，玩家很难理解一张卡为什么强、一段脚本为什么贵。
+Limit cards only by cost and scripts can reorder forever, making hand order meaningless. Limit scripts only by credits and cards can be arbitrarily strong, making cost decorative. Mix both and players cannot tell why a card is strong or a script is expensive.
 
-所以卡牌只算“这张牌本身有多强”，脚本只算“这一回合调度得有多复杂”。两者分开，构筑和操作才是两层独立的决策。
+So cards measure "how strong is this card by itself", and scripts measure "how complex is this turn's scheduling". Keeping them apart gives deck building and operation two independent decision layers.
 
-### 11.4 算力价格的直觉
+### 11.4 Price intuition
 
-| 类型 | 价格倾向 | 原因 |
+| Type | Price tendency | Why |
 | --- | --- | --- |
-| 伤害 / 格挡 / 治疗 | 中高价，平方增长 | 数值越大，越容易滚雪球 |
-| 回能 | 极贵 | 能量会放大整回合输出 |
-| 抽牌 / 弃牌 | 中价，按张数增长 | 牌差直接改变回合质量 |
-| 调度 | 低价 | 鼓励玩家关注手牌顺序 |
-| 只读 | 低价 | 信息不应该比行动更贵 |
-| 日志 | 极低 | 鼓励复盘 |
+| Damage / block / heal | Medium-high, quadratic | Larger numbers snowball |
+| Energy gain | Very expensive | Energy amplifies the whole turn |
+| Draw / discard | Medium, linear in cards | Card advantage changes turn quality |
+| Scheduling | Cheap | Encourages hand-order play |
+| Reads | Cheap | Information should not cost more than action |
+| Logging | Very cheap | Encourages review |
 
 ---
 
 <a id="ai"></a>
-## 12 · AI 对手
+## 12 · AI opponent
 
-### 12.1 SENTINEL-07 的五种人格
+### 12.1 Five personas
 
-| 人格 | 英文 | 风格 | 行为倾向 |
-| --- | --- | --- | --- |
-| 快攻 | Aggressor | Rush / sustained pressure | 血量安全时连续进攻，不浪费能量防守 |
-| 控场 | Controller | Control / slow tempo | 先架格挡再慢慢压上，逼你用资源拆防线 |
-| 弃牌联动 | Discarder | Discard / queue tuning | 丢掉挡在最左的牌，让攻击接上 |
-| 抽牌连击 | Combo | Draw / multi-card turns | 先补手牌与能量，再一口气连续出牌 |
-| 诱饵反打 | Bait | Counterpunch / resource patience | 血线低时先守住，等你打空能量再反击 |
+| Persona | Style | Behavior |
+| --- | --- | --- |
+| Aggressor | Rush / sustained pressure | Attacks repeatedly while safe, does not waste Energy on defense |
+| Controller | Control / slow tempo | Builds Block first, then pressures you into spending resources on defense |
+| Discarder | Discard / queue tuning | Discards the card blocking the left slot so attacks connect |
+| Combo | Draw / multi-card turns | Refills hand and Energy, then plays several cards in a row |
+| Bait | Counterpunch / resource patience | Defends at low HP, waits for you to empty Energy, then hits back |
 
-### 12.2 AI 能看到什么
+### 12.2 What the AI sees
 
-**可以：**
+**Allowed:**
 
-- 公开场面：双方生命、格挡、牌堆张数、弃牌、回合数；
-- 自己的手牌；
-- 自己的能量和牌组信息；
-- 公开的玩家行动结果。
+- public board: both HP, Block, pile counts, discards, turn number;
+- its own hand;
+- its own Energy and deck information;
+- public results of player actions.
 
-**不可以：**
+**Not allowed:**
 
-- 你的卡名、卡面描述；
-- 你的手牌；
-- 你的抽牌顺序；
-- 你的代码；
-- 隐藏资源或未来意图。
+- your card names or descriptions;
+- your hand;
+- your draw order;
+- your code;
+- hidden resources or future intent.
 
-### 12.3 外接 LLM（可选）
+### 12.3 External LLM (optional)
 
-- 构筑期切到“外接战术”。
-- 填写兼容 `chat/completions` 的端点、模型和 Key。
-- Key 只留在页面内存，不写入 localStorage 或后端。
-- 浏览器直连需要端点允许 CORS。
-- 任何非法、超时、超预算或解析失败都会**整份回退**到固定战术，并写入审计。
-- LLM 只输出动作计划，最终仍由规则引擎校验后执行。
+- Switch to **External tactics** during deck building.
+- Fill in a `chat/completions` endpoint, model and key.
+- The key stays in page memory; it is not written to localStorage or a backend.
+- Browser requests require the endpoint to allow CORS.
+- Any invalid, timed-out, over-budget or unparsable response falls back to the fixed tactics as a whole, with an audit entry.
+- The LLM only proposes actions. The rules engine validates and executes them.
 
-### 12.4 公平性
+### 12.4 Fairness
 
-- 对手沿用同一套费用、能量、牌堆和算力规则，牌组独立。
-- 对手没有意图预告。
-- 对手不能读玩家代码/手牌/抽牌顺序。
-- 对手的卡名与描述不进入提示词。
-- 战前只披露“战斗风格”，不披露具体手牌或计划。
+- The opponent follows the same cost, Energy, pile and credit rules, with its own deck.
+- It does not announce intent.
+- It cannot read your code, hand or draw order.
+- Its card names and descriptions never enter the prompt.
+- Before the battle it reveals only its combat style, not its hand or plan.
 
 ---
 
 <a id="report"></a>
-## 13 · 战后复盘
+## 13 · Post-battle review
 
-复盘会把这一局的代码摊开。
+The review screen opens up this battle's code.
 
-### 13.1 代码账本（Code ledger）
+### 13.1 Code ledger
 
-每一行记录：
+Every line records:
 
-- 来源：脚本 / 卡牌 / 对手 / 引擎；
-- 位置：源码行号；
-- API 调用次数；
-- 算力合计；
-- 伤害 / 格挡 / 治疗；
-- 牌堆操作次数。
+- source: script / card / opponent / engine;
+- source line number;
+- API call count;
+- total credits;
+- damage / block / healing;
+- pile operations.
 
-它会回答：
+It answers: "Which line produced that 8 damage this turn?"
 
-> “到底是哪一行代码，在这一回合造成了这 8 点伤害？”
+### 13.2 Pile replay
 
-### 13.2 牌堆回放（Pile replay）
+By turn:
 
-按回合排列：
+- draw;
+- discard;
+- shuffle;
+- register writes;
+- command halts;
+- AI actions;
+- phase changes.
 
-- 抽牌；
-- 弃牌；
-- 洗牌；
-- 寄存器写入；
-- 命令熔断；
-- AI 动作；
-- 回合阶段变化。
+### 13.3 Code interrogation
 
-### 13.3 读码审讯（Code interrogation）
+Questions come from this battle's log:
 
-题目来自本局记录：
+- Which turn was a card discarded?
+- Which API consumed the most credits?
+- Which line caused an Energy interrupt?
+- What was the last value written to a register?
 
-- 某张牌在第几回合被弃掉？
-- 哪个 API 消耗了最多算力？
-- 哪一行导致了能量中断？
-- 这个寄存器最后一次写入是什么？
+Wrong answers show evidence and an explanation.
 
-答错会给出证据和解释。
+### 13.4 Opponent file
 
-### 13.4 对手档案（Opponent file）
+- Persona and style;
+- proposal count;
+- fallback count;
+- last prompt hash;
+- last validation result;
+- sample actions.
 
-- 人格与风格；
-- 提议次数；
-- 回退次数；
-- 最近一次提示词哈希；
-- 最近一次校验结果；
-- 动作样本。
+### 13.5 Replay check
 
-### 13.5 重放校验（Replay check）
+Replay events into public pile and resource state, then compare hashes, HP, turn and outcome.
 
-把事件重放成公共牌堆与资源状态，比较哈希、生命、回合和结果。
+It checks:
 
-它验证的是：
+- that the event log is self-consistent;
+- that the replayed state matches the record;
+- that the deterministic signature is stable.
 
-- 事件日志是否自洽；
-- 重放后的状态是否与记录一致；
-- 确定性签名是否稳定。
+### 13.6 JSON export
 
-### 13.6 导出日志
-
-复盘页可以导出 JSON：
+The review screen exports JSON:
 
 ```json
 {
@@ -928,27 +923,27 @@ ctx.gain_energy(3)
 }
 ```
 
-适合用来做平衡分析、Bug 复现或二次可视化。
+Useful for balance analysis, bug reproduction or a custom visualization.
 
 ---
 
 <a id="i18n"></a>
-## 14 · 语言
+## 14 · Language
 
-**游戏默认英文，右上角 `EN / 中文` 可以随时切换。**
+**The game defaults to English. The `EN / 中文` button in the top-right corner switches at any time.**
 
-- 首次打开是 English；选择写入 `localStorage`，下次打开保持。
-- 标题页、构筑、对局、复盘、规则弹窗、API 参考和卡面画笔都会即时更新。
-- 引擎内部日志保持中文，渲染层负责翻译；切换语言不会改变对局、事件、哈希或重放结果。
-- 没改过的示例卡和默认寄存器会跟着语言切换；你写过的卡和寄存器保持原样。
-- 3D 牌桌的标签、浮动数字和纹理也会切换。界面文案在 `src/i18n/`。
+- First load is English. The choice is written to `localStorage` and kept on the next visit.
+- The title screen, build, battle, review, rules modal, API reference and card painter update immediately.
+- Engine logs stay in Chinese internally; the rendering layer translates them. Switching language does not change battles, events, hashes or replay results.
+- Untouched sample cards and default registers follow the switch. Your edited cards and registers stay as written.
+- 3D table labels, floating numbers and textures switch too. UI strings live in `src/i18n/`.
 
 ---
 
 <a id="architecture"></a>
-## 15 · 技术架构
+## 15 · Architecture
 
-### 15.1 总览
+### 15.1 Overview
 
 ```mermaid
 flowchart TB
@@ -967,45 +962,45 @@ flowchart TB
     REPORT --> UI
 ```
 
-### 15.2 编译流水线
+### 15.2 Compilation pipeline
 
 ```text
-源码 (Python-like DSL)
-  → 词法分析
-  → 缩进 / 语法分析
+Source (Python-like DSL)
+  → lexer
+  → indentation / parser
   → AST
-  → 统一 IR
-  → 抽象解释（区间、最坏情况、负面抵扣、费用、效果上限）
-  → 硬限制检查
-  → 沙盒 IR 解释器
-  → 战斗结算
-  → 事件日志
-  → 复盘 / 重放
+  → unified IR
+  → abstract interpretation (ranges, worst case, negatives, cost, effect cap)
+  → hard-limit checks
+  → sandbox IR interpreter
+  → battle resolution
+  → event log
+  → review / replay
 ```
 
-### 15.3 关键模块
+### 15.3 Key modules
 
-| 模块 | 职责 |
+| Module | Responsibility |
 | --- | --- |
-| `src/engine/config.ts` | 规则常量、API 白名单、效果上限、算力价格、代码硬限制 |
-| `src/engine/python.ts` | 受限 Python 词法/缩进/语法（支持 `//` 与 `#` 注释） |
-| `src/engine/ir.ts` | AST → 统一 IR |
-| `src/engine/analyze.ts` | 抽象解释、最坏情况估算、负面抵扣、效果上限、算力、硬限制 |
-| `src/engine/sandbox.ts` | IR 解释器、运行时熔断、算力计数器 |
-| `src/engine/battle.ts` | 阶段、牌堆、格挡、伤害、回合、胜负、事件日志 |
-| `src/engine/ai.ts` | 五种人格、外接 LLM 提议、审计、回退 |
-| `src/engine/rng.ts` | 固定种子确定性 RNG |
-| `src/engine/report.ts` | 归因、时间轴、审讯题、重放校验 |
-| `src/content/deck.ts` | 示例牌组、AI 牌组、示例脚本、双语默认内容 |
-| `src/table/scene.ts` | Three.js 牌桌、相机、手牌 diff、演出 |
-| `src/table/textures.ts` | 程序化卡面/牌桌纹理 |
-| `src/table/timeline.ts` | 演出时间线、速度标签 |
-| `src/table/transition.ts` | 过渡与状态插值 |
-| `src/i18n/index.tsx` | 语言状态、存储、订阅、`useT` |
-| `src/i18n/messages.ts` | 引擎消息/卡名/描述英译 |
-| `src/ui/*` | 标题、构筑、战斗、复盘、API、画笔、语言按钮 |
+| `src/engine/config.ts` | Rule constants, API allowlist, effect caps, credit prices, code limits |
+| `src/engine/python.ts` | Restricted Python lexer/indentation/parser (`//` and `#` comments) |
+| `src/engine/ir.ts` | AST → unified IR |
+| `src/engine/analyze.ts` | Abstract interpretation, worst case, negatives, effect caps, credits, limits |
+| `src/engine/sandbox.ts` | IR interpreter, runtime fuses, credit counter |
+| `src/engine/battle.ts` | Phases, piles, block, damage, turns, outcome, event log |
+| `src/engine/ai.ts` | Five personas, external LLM proposals, audit, fallback |
+| `src/engine/rng.ts` | Fixed-seed deterministic RNG |
+| `src/engine/report.ts` | Attribution, timeline, quiz, replay check |
+| `src/content/deck.ts` | Sample decks, AI decks, sample scripts, bilingual defaults |
+| `src/table/scene.ts` | Three.js table, camera, hand diffing, presentation |
+| `src/table/textures.ts` | Procedural card/table textures |
+| `src/table/timeline.ts` | Presentation timeline and speed labels |
+| `src/table/transition.ts` | Transitions and state interpolation |
+| `src/i18n/index.tsx` | Language state, storage, subscription, `useT` |
+| `src/i18n/messages.ts` | Engine message / card name / description translations |
+| `src/ui/*` | Title, build, battle, review, API, painter, language toggle |
 
-### 15.4 依赖方向
+### 15.4 Dependency direction
 
 ```text
 content → analyze → python / ir
@@ -1015,84 +1010,84 @@ UI      → engine public API only
 table   → presentation state, not rules
 ```
 
-`ai.ts` 不导入 battle 运行时；AI 只产生动作提议，由 battle 校验。
+`ai.ts` does not import the battle runtime. The AI only proposes actions; battle validates them.
 
-### 15.5 沙盒
+### 15.5 Sandbox
 
-- 只允许白名单 API。
-- 禁止任意代码执行、文件、网络、反射、`eval`。
-- 禁止直接访问牌堆内部数组。
-- 循环上界必须可证明。
-- 运行时限制：
-  - 每回合总迭代 220；
-  - 单循环 32；
-  - 列表写入 64；
-  - 列表长度 8；
-  - 字符串 64；
-  - 数值 9999；
-  - 执行 140ms。
-- 越线只停当前步骤，不会让整个页面崩溃。
+- Allowlisted APIs only.
+- No arbitrary execution, files, network, reflection or `eval`.
+- No direct access to pile arrays.
+- Loop bounds must be provable.
+- Runtime limits:
+  - 220 total iterations per turn;
+  - 32 iterations per loop;
+  - 64 list writes;
+  - list length 8;
+  - string length 64;
+  - value 9999;
+  - 140ms execution.
+- Crossing a limit stops the current step, not the whole page.
 
-### 15.6 确定性
+### 15.6 Determinism
 
-- 固定种子 RNG；
-- 事件日志记录来源、行号、API、数值和状态；
-- 重放只消费录制事件，不重新请求 LLM；
-- 同牌组 + 同种子 + 同脚本 + 同 AI 动作 → 同结果。
+- Fixed-seed RNG.
+- Event logs store source, line, API, values and state.
+- Replay consumes recorded events and never calls the LLM again.
+- Same deck + same seed + same scripts + same AI actions → same result.
 
-### 15.7 3D 表现层
+### 15.7 3D layer
 
-- Three.js 负责牌桌、卡牌 mesh、相机与动画。
-- 卡面由 Canvas 纹理生成，支持自绘图片。
-- 手牌增量对账：只移动发生变化的 mesh。
-- 演出与规则解耦：跳过演出不会改变结算结果。
-- `prefers-reduced-motion` 直接进入最终状态。
-- 竖屏视口自动拉远相机，保持左右手牌可读。
+- Three.js handles the table, card meshes, camera and animation.
+- Card faces are Canvas textures and can use painted art.
+- Hand reconciliation moves only changed meshes.
+- Presentation is decoupled from rules; skipping animation never changes resolution.
+- `prefers-reduced-motion` jumps to the final state.
+- Portrait view pulls the camera back to keep both sides readable.
 
 ---
 
 <a id="structure"></a>
-## 16 · 项目结构
+## 16 · Project layout
 
 ```text
 Code-the-Battle/
 ├─ src/
-│  ├─ App.tsx                 # 屏幕路由、牌组、语言切换
-│  ├─ main.tsx                # React 入口
-│  ├─ assets/                 # 程序化 SVG（竞技场 / 角色 / 卡面）
+│  ├─ App.tsx                 # Screen routing, deck, language switch
+│  ├─ main.tsx                # React entry
+│  ├─ assets/                 # Procedural SVG (arena / characters / card art)
 │  ├─ content/
-│  │  └─ deck.ts              # 示例牌组、AI 牌组、双语默认内容
+│  │  └─ deck.ts              # Sample decks, AI decks, bilingual defaults
 │  ├─ engine/
-│  │  ├─ config.ts            # 规则常量、API、价格、硬限制
-│  │  ├─ python.ts            # 词法/语法
-│  │  ├─ ir.ts                # 统一 IR
-│  │  ├─ analyze.ts           # 抽象解释 / 效果上限 / 算力 / 限制
-│  │  ├─ sandbox.ts           # IR 解释器 + 熔断
-│  │  ├─ battle.ts            # 战斗规则与事件日志
-│  │  ├─ ai.ts                # 人格 / LLM 提议 / 审计
-│  │  ├─ rng.ts               # 固定种子 RNG
-│  │  └─ report.ts            # 归因 / 时间轴 / 审讯 / 重放
+│  │  ├─ config.ts            # Rules, APIs, prices, hard limits
+│  │  ├─ python.ts            # Lexer / parser
+│  │  ├─ ir.ts                # Unified IR
+│  │  ├─ analyze.ts           # Abstract interpretation / caps / credits / limits
+│  │  ├─ sandbox.ts           # IR interpreter + fuses
+│  │  ├─ battle.ts            # Battle rules and event log
+│  │  ├─ ai.ts                # Personas / LLM proposals / audit
+│  │  ├─ rng.ts               # Fixed-seed RNG
+│  │  └─ report.ts            # Attribution / timeline / quiz / replay
 │  ├─ i18n/
-│  │  ├─ index.tsx            # 语言状态 / useT / localStorage
-│  │  └─ messages.ts          # 引擎消息 / 卡名英译
+│  │  ├─ index.tsx            # Language state / useT / localStorage
+│  │  └─ messages.ts          # Engine messages / card names
 │  ├─ table/
-│  │  ├─ scene.ts             # Three.js 牌桌
-│  │  ├─ textures.ts          # 卡面与桌面纹理
-│  │  ├─ layout.ts            # 手牌扇形布局
-│  │  ├─ timeline.ts          # 演出时间线
-│  │  └─ transition.ts        # 过渡
+│  │  ├─ scene.ts             # Three.js table
+│  │  ├─ textures.ts          # Card and table textures
+│  │  ├─ layout.ts            # Fan layout
+│  │  ├─ timeline.ts          # Presentation timeline
+│  │  └─ transition.ts        # Transitions
 │  └─ ui/
-│     ├─ BootScreen.tsx       # 标题页 / 规则弹窗
-│     ├─ BuildScreen.tsx      # 构筑
-│     ├─ BattleScreen.tsx     # 对局 / 终端
-│     ├─ ReportScreen.tsx     # 复盘
-│     ├─ ApiReference.tsx     # API 手册
-│     ├─ CodeEditor.tsx       # 受限编辑器
-│     ├─ CardPaint.tsx        # 卡面画笔
-│     ├─ LanguageToggle.tsx   # 右上角语言按钮
-│     ├─ components.tsx       # 卡面 / 面板 / 事件流
-│     ├─ visual.ts            # 演出 cue
-│     └─ theme.css            # 视觉系统
+│     ├─ BootScreen.tsx       # Title / rules modal
+│     ├─ BuildScreen.tsx      # Build
+│     ├─ BattleScreen.tsx     # Battle / terminal
+│     ├─ ReportScreen.tsx     # Review
+│     ├─ ApiReference.tsx     # API reference
+│     ├─ CodeEditor.tsx       # Restricted editor
+│     ├─ CardPaint.tsx        # Card painter
+│     ├─ LanguageToggle.tsx   # Top-right language button
+│     ├─ components.tsx       # Card / panel / event feed
+│     ├─ visual.ts            # Presentation cues
+│     └─ theme.css            # Visual system
 ├─ tests/
 │  ├─ rules.test.ts
 │  ├─ economy.test.ts
@@ -1113,179 +1108,139 @@ Code-the-Battle/
 ---
 
 <a id="dev"></a>
-## 17 · 开发、测试与构建
+## 17 · Development and tests
 
-### 17.1 先读这几份文件
+### 17.1 Read these first
 
-| 想改什么 | 先读 |
+| What you want to change | Start here |
 | --- | --- |
-| 规则 / 数值 / API | `src/engine/config.ts` |
-| 卡牌语法 | `src/engine/python.ts` |
-| 效果上限 / 算力 | `src/engine/analyze.ts` |
-| 运行时行为 | `src/engine/sandbox.ts` |
-| 回合与牌堆 | `src/engine/battle.ts` |
-| AI 行为 | `src/engine/ai.ts` |
-| 复盘 | `src/engine/report.ts` |
-| 默认牌组 | `src/content/deck.ts` |
-| 界面文案 | `src/i18n/messages.ts` 与各 UI 组件 |
-| 3D 表现 | `src/table/scene.ts` |
+| Rules / numbers / APIs | `src/engine/config.ts` |
+| Card syntax | `src/engine/python.ts` |
+| Effect caps / credits | `src/engine/analyze.ts` |
+| Runtime behavior | `src/engine/sandbox.ts` |
+| Turns and piles | `src/engine/battle.ts` |
+| AI behavior | `src/engine/ai.ts` |
+| Review | `src/engine/report.ts` |
+| Default decks | `src/content/deck.ts` |
+| UI strings | `src/i18n/messages.ts` and the UI components |
+| 3D presentation | `src/table/scene.ts` |
 
-### 17.2 测试覆盖
+### 17.2 Test coverage
 
-| 文件 | 覆盖 |
+| File | Coverage |
 | --- | --- |
-| `rules.test.ts` | 费用上限、类型/目标、注释、硬停、0 费、表达式计费、自伤抵扣 |
-| `economy.test.ts` | 算力价格、预算锁定、循环压缩、读取计价 |
-| `ai.test.ts` | 五种人格、可行性、信息隔离、能量约束 |
-| `balance.test.ts` | 示例牌组胜率、手写排序收益、纯 API 策略 |
-| `smoke.test.ts` | 编译、完整对局、复盘、重放、能量中断 |
-| `table.test.ts` | 手牌布局、牌堆上限、相机、卡面传递 |
-| `transition.test.ts` | 出牌滑移、抽牌追加、扇形几何 |
-| `visual.test.ts` | 格挡 cue、阶段 cue、弃牌 cue、重名卡面 |
+| `rules.test.ts` | Cost caps, types/targets, comments, hard stops, 0-cost, expression pricing, self-damage discount |
+| `economy.test.ts` | Credit prices, budget locking, loop compression, read pricing |
+| `ai.test.ts` | Five personas, feasibility, information isolation, energy constraints |
+| `balance.test.ts` | Starter deck win rate, hand-sort benefit, pure API strategies |
+| `smoke.test.ts` | Compile, full battle, review, replay, energy interrupt |
+| `table.test.ts` | Hand layout, pile caps, camera, card art handoff |
+| `transition.test.ts` | Play slide, draw append, fan geometry |
+| `visual.test.ts` | Block cue, phase cue, discard cue, duplicate card faces |
 
-跑一遍：
+Run:
 
 ```bash
 npm test
 npm run build
 ```
 
-当前 8 个测试文件、53 项测试。构建产物在 `dist/`。
+There are 8 test files and 53 tests. The build output is in `dist/`.
 
-### 17.3 修改规则时的建议
+### 17.3 When changing rules
 
-1. 先改 `config.ts` 的常量。
-2. 同步更新 `analyze.ts` 和 `sandbox.ts` 的边界。
-3. 跑 `npm test`，重点看 `rules` / `economy` / `balance`。
-4. 如果改了文案，检查 `messages.ts` 是否有对应翻译。
-5. 如果改了 UI 结构，检查右上角语言按钮是否仍不遮挡头部按钮。
-6. 如果改了 3D 牌桌，检查 `table.test.ts` 和竖屏布局。
+1. Change constants in `config.ts`.
+2. Update the boundaries in `analyze.ts` and `sandbox.ts`.
+3. Run `npm test` and focus on `rules`, `economy` and `balance`.
+4. If you changed UI strings, check `messages.ts` has the matching translation.
+5. If you changed UI structure, check that the top-right language button still does not cover header actions.
+6. If you changed the 3D table, check `table.test.ts` and portrait layout.
 
-### 17.4 构建产物
+### 17.4 Build output
 
-- `dist/` 是纯静态文件。
-- 无后端、无环境变量、无数据库。
-- `base: './'` 适配任意子路径。
-- 需要 WebGL 才能渲染 3D 牌桌；其余 UI 在 2D Canvas / DOM 下仍可工作。
-
----
-
-<a id="design"></a>
-## 18 · 设计取舍与边界
-
-### 18.1 为什么不让 AI 写牌
-
-如果 AI 帮你写牌，你做的事就变成挑生成结果；如果 AI 帮你写战术，你只能看它打；如果 AI 能读你的代码，它就能针对你，不再公平。
-
-所以这里有一条硬边界：**AI 只当对手，卡牌和战术由玩家写。**
-
-### 18.2 为什么没有状态、稀有度和卡牌生成
-
-- 状态系统会把“读代码”变成“读规则书”；
-- 稀有度会把“构筑”变成“抽卡”；
-- 卡牌生成会把“手写”变成“随机池”；
-- 这些都会把重点从写代码移开。
-
-### 18.3 为什么卡牌和脚本分开算
-
-- 卡牌是**静态强度**；
-- 脚本是**动态调度**；
-- 两者混在一起，玩家无法建立稳定的策略直觉。
-
-### 18.4 为什么引擎内部保留中文
-
-- 测试快照、历史战报、重放哈希都依赖稳定文本；
-- 翻译放在渲染层，切换语言不影响规则；
-- 这样中英双语不会破坏确定性。
-
-### 18.5 明确的非目标
-
-- 不做联网对战；
-- 不做账号系统；
-- 不做云存档；
-- 不做遗物 / 解锁 / 关卡递进；
-- 不做实时 AI 教练；
-- 不做任意代码执行；
-- 不做多模式。
+- `dist/` is static files only.
+- No backend, environment variables or database.
+- `base: './'` supports any sub-path.
+- The 3D table needs WebGL; the rest of the UI still works with 2D Canvas / DOM.
 
 ---
 
 <a id="faq"></a>
-## 19 · FAQ
+## 18 · FAQ
 
-### Q1：我需要会 Python 吗？
+### Q1: Do I need to know Python?
 
-不需要完整 Python。你只需要一个很小的受限子集：类、赋值、`if`、`for range`、函数调用、基本表达式。没有 `import`、没有文件、没有网络、没有 `eval`。
+No. You need a small restricted subset: classes, assignment, `if`, `for range`, function calls and basic expressions. No `import`, files, network or `eval`.
 
-### Q2：卡牌真的会执行我的代码吗？
+### Q2: Does the card really execute my code?
 
-会。源码先经过词法/语法、IR、抽象解释和硬限制，再由沙盒解释器执行。动画只是表现，结算由解释器完成。
+Yes. Source goes through lexer/parser, IR, abstract interpretation and hard limits, then the sandbox interpreter. Animation is presentation; resolution is interpreted.
 
-### Q3：AI 会偷看我的牌或代码吗？
+### Q3: Can the AI peek at my cards or code?
 
-不会。AI 只接收公开场面和自己的手牌；卡名、描述、玩家手牌、抽牌顺序、代码都不进入提示词。
+No. The AI receives only the public board and its own hand. Card names, descriptions, your hand, draw order and code never enter the prompt.
 
-### Q4：为什么我的卡编译失败？
+### Q4: Why does my card fail to compile?
 
-常见原因：
+Common causes:
 
-- 效果超过费用上限；
-- 0 费卡使用 `gain_energy`；
-- 循环上界无法证明；
-- 行数/复杂度超限；
-- API 不在白名单；
-- 寄存器写入越界。
+- effect over the cost cap;
+- 0-cost card uses `gain_energy`;
+- loop bound cannot be proven;
+- line or complexity limit;
+- API not on the allowlist;
+- register write out of range.
 
-### Q5：为什么脚本确认失败？
+### Q5: Why does script confirmation fail?
 
-最坏情况超过 14 点算力。缩小数值、减少读取、把大循环拆开，或改用更便宜的调度 API。
+The worst case exceeds 14 credits. Lower the numbers, read less, split large loops, or use cheaper scheduling APIs.
 
-### Q6：切换语言会改变对局吗？
+### Q6: Does switching language change the battle?
 
-不会。语言只影响显示。引擎日志、事件、哈希和重放结果保持稳定。
+No. Language changes presentation only. Engine logs, events, hashes and replay results stay stable.
 
-### Q7：切换语言会翻译我写的卡吗？
+### Q7: Does switching language translate my cards?
 
-不会。只切换未修改的示例卡和默认寄存器。自定义卡牌源码保持原样。
+No. Only untouched sample cards and default registers switch. Custom card source stays as written.
 
-### Q8：卡面画作会保存吗？
+### Q8: Is card art saved?
 
-只保存在当前构筑会话。刷新页面会丢失；游戏没有云端存档。
+Only for the current build session. Refreshing loses it; there is no cloud save.
 
-### Q9：外接 LLM 的 Key 安全吗？
+### Q9: Is the external LLM key safe?
 
-Key 只存在页面内存，刷新即消失。没有后端。浏览器会直接请求你填写的端点，因此端点必须允许 CORS。
+The key stays in page memory and disappears on refresh. There is no backend. The browser calls the endpoint directly, so it must allow CORS.
 
-### Q10：手机能玩吗？
+### Q10: Can I play on a phone?
 
-可以。UI 会响应式适配，3D 相机在竖屏自动拉远。但小屏写代码和看牌堆仍然不如桌面舒服。
+Yes. The UI is responsive and the 3D camera pulls back in portrait. Writing code and reading piles are still more comfortable on a desktop.
 
-### Q11：为什么默认是英文？
+### Q11: Why is English the default?
 
-默认英文，方便不看中文的玩家直接试；右上角随时切中文，选择会保存在浏览器里。
+It lets players who do not read Chinese try the game immediately. The top-right button switches to Chinese, and the choice is stored in the browser.
 
-### Q12：可以用于教学 / 直播 / 二次创作吗？
+### Q12: Can I use it for teaching, streaming or remixing?
 
-可以用于学习、教学演示和内容创作。转载或再分发前请先联系仓库作者确认授权。
+Yes, for learning, teaching demos and content creation. Contact the repository owner before redistributing.
 
 ---
 
 <a id="english"></a>
-## 20 · English quick start
+## 19 · Quick start
 
-完整英文版见 [README.en.md](README.en.md)。
+Chinese edition: [README.zh.md](README.zh.md).
 
 **Code the Battle** is a browser-only, turn-based card game where you write the cards and the tactics yourself.
 
 - Build 5–10 cards in a small Python-like DSL.
-- Each card has fixed fields: `name`, `cost`, `type`, `target`, and one open `effect(self, ctx)`.
-- During a duel, write a short script each turn in the terminal.
-- The rules engine statically analyzes and sandbox-executes every line, then logs the result.
-- The AI opponent sees only the public board and its own hand.
+- Each card has fixed fields and one open `effect(self, ctx)`.
+- Each turn, write a short script in the terminal.
+- The engine statically analyzes and sandbox-executes every line, then logs the result.
+- The AI sees only the public board and its own hand.
 
 **Live:** https://warpshlczy.github.io/Code-the-Battle/
 
-Default language is **English**. Use the `EN / 中文` button in the top-right corner to switch at any time. Custom cards are never machine-translated.
+Default language is **English**. The `EN / 中文` button switches at any time. Custom cards are never machine-translated.
 
 ```python
 class DirectStrike(Card):
@@ -1305,22 +1260,6 @@ npm test
 npm run build
 ```
 
-The full rules, API tables and effect caps are in [README.en.md](README.en.md).
-
 ---
 
-有问题或想改规则，直接开 Issue。提交 PR 前请先跑 `npm test` 和 `npm run build`。
-
----
-
-<div align="center">
-
-**写一张牌。写一段战术。打一场。**
-
-**Vibe code 太久？那就用代码证明一次。**
-
-[▶ PLAY LIVE](https://warpshlczy.github.io/Code-the-Battle/) · [RULES](#rules) · [API](#api) · [ARCHITECTURE](#architecture) · [BACK TO TOP](#top)
-
-<sub>React + TypeScript + Vite + Three.js + Vitest。纯静态站点，无账号，AI 只做对手。</sub>
-
-</div>
+Issues and rule suggestions are welcome. Run `npm test` and `npm run build` before opening a PR.
