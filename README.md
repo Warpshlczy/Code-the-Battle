@@ -1013,6 +1013,7 @@ export function useT(): Translate {
 - `LanguageToggle` 挂在 `App` 顶层，所有屏幕共享。
 - `translateMessage()` 使用精确映射 + 正则规则 + 短语回退。
 - 3D 纹理缓存 key 加入语言，切换时重建牌桌。
+- `document.documentElement.lang` 同步为 `en` / `zh-CN`，读屏和浏览器翻译都能拿到正确语言。
 
 ---
 

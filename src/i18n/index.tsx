@@ -22,6 +22,14 @@ function subscribe(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
+/** Keep the document language in sync for screen readers and browser translation. */
+function applyDocumentLang(lang: Lang): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+}
+
+applyDocumentLang(current);
+
 export function getLang(): Lang {
   return current;
 }
@@ -29,6 +37,7 @@ export function getLang(): Lang {
 export function setLang(lang: Lang): void {
   if (lang === current) return;
   current = lang;
+  applyDocumentLang(lang);
   try {
     window.localStorage.setItem(STORAGE_KEY, lang);
   } catch {
