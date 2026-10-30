@@ -7,9 +7,9 @@
 
 # CODE THE BATTLE
 
-### 断链协议 · Protocol Breach
 
-**一个把写代码重新变成战斗的回合制卡牌编程游戏。**
+
+***一个重新把写代码变成战斗的回合制卡牌编程游戏。***
 
 *“Vibe-coded too long and forgot how to code? Play Code the Battle and prove your code beats the AI in a turn-based card duel.”*
 
