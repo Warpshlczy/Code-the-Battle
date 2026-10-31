@@ -831,10 +831,10 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - Browser requests require the endpoint to allow CORS.
 - After the handshake, SENTINEL designs its own 5–10 card deck through the external model.
 - Every designed card must declare cost/type/target, expose only `effect(self, ctx)` and carry a trailing `//` comment. The comment becomes the card description on its face and in its deck.
-- A designed deck must contain at least two attacks, stay inside the total cost cap and compile through the same compiler as player cards. Any illegal card, over-budget effect, missing comment, timeout or HTTP error rejects the whole deck and falls back to the fixed deck.
+- A designed deck must contain at least two attacks, stay inside the total cost cap and compile through the same compiler as player cards. Model output is normalized first: `#` comments become `//`, extra fields and docstrings are removed, missing card text is filled in, and an over-budget effect raises the card's cost instead of rejecting it. Illegal cards are dropped, then the deck is trimmed to the card-count and total-cost caps. If the deck still fails, one corrective round is sent; only after both rounds fail, or on timeout/HTTP errors, does it fall back to the fixed deck.
 - The model only proposes actions and deck source. The rules engine validates and executes them.
 - Deck provenance (fixed vs self-designed, model, prompt hash, tokens, validation note and raw output) is kept in the battle state and shown in the opponent file and exported log.
-- Any invalid, timed-out, over-budget or unparsable **action plan** falls back to the fixed tactics as a whole, with an audit entry. Fenced JSON, surrounding prose, operation aliases and `reasoning_content` are accepted, so a well-formed plan is not rejected over formatting.
+- Any invalid, timed-out, over-budget or unparsable **action plan** still falls back to the fixed tactics as a whole, with an audit entry. The parser accepts fenced or prose-wrapped JSON, near-JSON (single quotes, trailing commas, full-width punctuation, raw newlines inside strings), multiple embedded JSON objects, operation aliases and Chinese verbs, plain op sequences and `reasoning_content`, so a well-formed plan is not rejected over formatting.
 
 ### 12.4 Fairness
 

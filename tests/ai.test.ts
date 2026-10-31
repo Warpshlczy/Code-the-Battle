@@ -168,6 +168,58 @@ describe('plan parsing tolerance', () => {
     expect(parsed.ops).toHaveLength(1);
     expect(parsed.note).toBe('a { b');
   });
+
+  it('skips a non-plan object and repairs single quotes, trailing commas and raw newlines', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => planResponse({
+      content: '{"note":"先想一想"}\n{\'ops\':[{\'op\':\'play\'},{\'op\':\'end\'}],}',
+    })));
+    const nearJson = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');
+    expect(nearJson.plan.source).toBe('llm');
+    expect(nearJson.plan.ops.map((o) => o.op)).toEqual(['play', 'end']);
+    expect(nearJson.meta.validation).toBe('格式通过');
+
+    vi.stubGlobal('fetch', vi.fn(async () => planResponse({
+      content: '{"ops":[{"op":"play"},{"op":"end"}],"note":"第一行\n第二行"}',
+    })));
+    const rawNewline = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');
+    expect(rawNewline.plan.source).toBe('llm');
+    expect(rawNewline.plan.ops.map((o) => o.op)).toEqual(['play', 'end']);
+
+    vi.stubGlobal('fetch', vi.fn(async () => planResponse({
+      content: JSON.stringify({ response: JSON.stringify({ ops: [{ op: 'discard' }, { op: 'end' }] }) }),
+    })));
+    const wrapped = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');
+    expect(wrapped.plan.source).toBe('llm');
+    expect(wrapped.plan.ops.map((o) => o.op)).toEqual(['discard', 'end']);
+  });
+
+  it('accepts Chinese connective prose and plans longer than the old 8-op limit', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => planResponse({ content: '先出牌，再弃牌，最后结束' })));
+    const prose = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');
+    expect(prose.plan.source).toBe('llm');
+    expect(prose.plan.ops.map((o) => o.op)).toEqual(['play', 'discard', 'end']);
+
+    const longOps = [
+      ...Array.from({ length: 9 }, () => ({ op: 'play' })),
+      { op: 'end' },
+      { op: 'discard' },
+    ];
+    vi.stubGlobal('fetch', vi.fn(async () => planResponse({ content: JSON.stringify({ ops: longOps }) })));
+    const longPlan = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');
+    expect(longPlan.plan.source).toBe('llm');
+    expect(longPlan.plan.ops).toHaveLength(10);
+    expect(longPlan.plan.ops[9].op).toBe('end');
+  });
+
+  it('uses reasoning_content when content holds a valid but non-plan JSON object', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => planResponse({
+      content: '{"note":"not a plan"}',
+      reasoning_content: '{"ops":[{"op":"discard"},{"op":"end"}]}',
+    })));
+    const { plan } = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-reasoner' }, 'aggressor');
+    expect(plan.source).toBe('llm');
+    expect(plan.ops.map((o) => o.op)).toEqual(['discard', 'end']);
+  });
 });
 
 describe('SENTINEL deck design', () => {
@@ -176,6 +228,38 @@ describe('SENTINEL deck design', () => {
   async function compiledDeck() {
     const sources = (await import('../src/content/deck')).STARTER_CARDS.slice(0, 6).map((s) => s.source);
     return sources.map((s) => compileCard(s, []).value!);
+  }
+
+  function attackCard(i: number): string {
+    return `class Jab${i}(Card):
+    name = "刺拳${i}"
+    cost = 1
+    type = "attack"
+    target = "enemy"
+
+    def effect(self, ctx):
+        ctx.deal_damage("enemy", 6)  // 造成 6 点伤害
+`;
+  }
+
+  function guardCard(i: number): string {
+    return `class Guard${i}(Card):
+    name = "守势${i}"
+    cost = 1
+    type = "skill"
+    target = "self"
+
+    def effect(self, ctx):
+        ctx.gain_block(8)  // 获得 8 点格挡
+`;
+  }
+
+  function deckResponse(sources: unknown[]): Response {
+    const cards = sources.map((source) => (typeof source === 'string' ? { source } : source));
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({ cards }) } }],
+      usage: { total_tokens: 40 },
+    }), { status: 200 });
   }
 
   it('asks for self-designed cards with comments and legal APIs', () => {
@@ -263,5 +347,95 @@ describe('SENTINEL deck design', () => {
     expect(design.ok).toBe(false);
     expect(design.cards).toHaveLength(0);
     expect(design.meta.note).toContain('未通过校验');
+  });
+
+  it('converts hash comments, drops extra fields and raises cost instead of rejecting over-cap cards', async () => {
+    const sources = [
+      `class Heavy(Card):
+    """Old docstring the engine cannot parse."""
+    name = "重击"
+    cost = 1
+    type = "attack"
+    target = "enemy"
+    description = "重击说明"
+    rarity = "rare"
+
+    def effect(self, ctx):
+        ctx.deal_damage("enemy", 8)  # 造成 8 点伤害
+`,
+      `class Battery(Card):
+    name = "电池"
+    cost = 0
+    type = "skill"
+    target = "none"
+
+    def effect(self, ctx):
+        ctx.gain_energy(1)  # 获得 1 点能量
+`,
+      attackCard(2),
+      attackCard(3),
+      guardCard(4),
+      guardCard(5),
+    ];
+    vi.stubGlobal('fetch', vi.fn(async () => deckResponse(sources)));
+    const design = await designAiDeck({ endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'controller', 'zh');
+    expect(design.ok).toBe(true);
+    expect(design.cards).toHaveLength(6);
+    const heavy = design.cards.find((card) => card.name === '重击');
+    const battery = design.cards.find((card) => card.name === '电池');
+    expect(heavy?.cost).toBe(2);
+    expect(heavy?.description).toContain('8');
+    expect(battery?.cost).toBeGreaterThan(0);
+    expect(design.meta.note).toContain('费用 1→2');
+    expect(design.cards.every((card) => card.description.trim().length > 0)).toBe(true);
+  });
+
+  it('drops illegal cards but keeps the rest of the designed deck', async () => {
+    const broken = `class Broken(Card):
+    name = "坏牌"
+    cost = 1
+    type = "attack"
+    target = "enemy"
+
+    def effect(self, ctx):
+        ctx.deal_damage("enemy", 6  // 缺少右括号
+`;
+    const sources = [broken, attackCard(1), attackCard(2), guardCard(3), guardCard(4), guardCard(5), guardCard(6)];
+    vi.stubGlobal('fetch', vi.fn(async () => deckResponse(sources)));
+    const design = await designAiDeck({ endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor', 'zh');
+    expect(design.ok).toBe(true);
+    expect(design.cards).toHaveLength(6);
+    expect(design.cards.some((card) => card.name === '坏牌')).toBe(false);
+    expect(design.meta.note).toContain('剔除 1 张非法牌');
+  });
+
+  it('accepts structured card objects as well as raw source strings', async () => {
+    const cards = Array.from({ length: 6 }, (_, i) => ({
+      name: `卡${i}`,
+      cost: 1,
+      type: i < 2 ? 'attack' : 'skill',
+      target: i < 2 ? 'enemy' : 'self',
+      effect: [i < 2 ? 'ctx.deal_damage("enemy", 6)' : 'ctx.gain_block(8)'],
+      comment: i < 2 ? '造成 6 点伤害' : '获得 8 点格挡',
+    }));
+    vi.stubGlobal('fetch', vi.fn(async () => deckResponse(cards)));
+    const design = await designAiDeck({ endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'controller', 'zh');
+    expect(design.ok).toBe(true);
+    expect(design.cards).toHaveLength(6);
+    expect(design.cards.every((card) => card.description.trim().length > 0)).toBe(true);
+  });
+
+  it('retries once with the validation note when the first design fails', async () => {
+    const shortSources = [attackCard(1), attackCard(2), guardCard(3), guardCard(4)];
+    const fullSources = [...shortSources, guardCard(5), guardCard(6)];
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(deckResponse(shortSources))
+      .mockResolvedValueOnce(deckResponse(fullSources));
+    vi.stubGlobal('fetch', fetchMock);
+    const design = await designAiDeck({ endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'controller', 'zh');
+    expect(design.ok).toBe(true);
+    expect(design.cards).toHaveLength(6);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(design.meta.note).toBe('SENTINEL 自行设计 6 张牌（第 2 次修正后通过）');
   });
 });
