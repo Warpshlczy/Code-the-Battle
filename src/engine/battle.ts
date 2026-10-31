@@ -13,7 +13,7 @@ import {
 } from './config';
 import type { CompiledCard, CompiledScript, RegisterDecl } from './analyze';
 import { Interpreter, SandboxHalt, SbList, TurnBudget, type Prim, type RV, type SandboxHost, type SbObj, type SourceRef } from './sandbox';
-import { proposeAiPlan, heuristicPlan, type AiConfig, type AiDeckMeta, type AiMeta, type AiOp, type AiPersona, type AiPlan, type AiView } from './ai';
+import { buildAiViewHistory, proposeAiPlan, heuristicPlan, type AiConfig, type AiDeckMeta, type AiMeta, type AiOp, type AiPersona, type AiPlan, type AiView } from './ai';
 import { Rng } from './rng';
 
 export type Side = 'player' | 'enemy';
@@ -598,28 +598,22 @@ export class Battle {
     }
   }
 
+  /**
+   * Structural pre-flight only. Energy and hand depth are judged while the plan
+   * runs, because a played card can add energy or draw more cards; rejecting the
+   * whole plan up front would discard legal early moves that the effect-driven
+   * budget could afford.
+   */
   private validateAiPlan(ops: AiOp[]): { ok: true } | { ok: false; reason: string } {
     if (!Array.isArray(ops) || ops.length === 0 || ops.length > 20) {
       return { ok: false, reason: '计划长度必须为 1-20' };
     }
-    let energy = this.enemy.energy;
-    const hand = this.enemy.piles.hand.map((c) => c.cost);
     let sawEnd = false;
     for (let i = 0; i < ops.length; i++) {
       const op = ops[i];
       if (!op || !['play', 'discard', 'end'].includes(op.op)) return { ok: false, reason: `第 ${i + 1} 个操作非法` };
       if (sawEnd) return { ok: false, reason: 'end 之后不允许有操作' };
-      if (op.op === 'end') {
-        sawEnd = true;
-        continue;
-      }
-      if (hand.length === 0) return { ok: false, reason: '手牌不足' };
-      if (op.op === 'play') {
-        if (hand[0] > energy) return { ok: false, reason: `能量不足（需要 ${hand[0]}）` };
-        energy -= hand.shift()!;
-      } else {
-        hand.shift();
-      }
+      if (op.op === 'end') sawEnd = true;
     }
     if (!sawEnd) return { ok: false, reason: '计划缺少 end' };
     return { ok: true };
@@ -637,24 +631,33 @@ export class Battle {
         energy: own.energy,
         hand: own.piles.hand.map((c, i) => ({
           slot: i,
+          name: c.name,
           cost: c.cost,
           type: c.type,
           target: c.target,
+          description: c.description,
+          source: c.compiled?.source ?? '',
           api: [...new Set(c.compiled?.apiUses.map((u) => u.name) ?? [])],
         })),
         drawCount: own.piles.draw.length,
         discardCount: own.piles.discard.length,
+        handLimit: LIMITS.deck.handCap,
+        drawLimit: LIMITS.deck.drawCap,
       },
       opponent: {
         hp: foe.hp,
         maxHp: foe.maxHp,
         block: foe.block,
+        energy: foe.energy,
         handCount: foe.piles.hand.length,
         drawCount: foe.piles.draw.length,
         discardCount: foe.piles.discard.length,
+        handLimit: LIMITS.deck.handCap,
+        drawLimit: LIMITS.deck.drawCap,
       },
       persona: this.persona,
       legalOps: ['play（打出最左牌）', 'discard（弃置最左牌）', 'end'],
+      history: buildAiViewHistory(this.log, this.turn, MAX_TURNS, this.executedAiPlans),
     };
   }
 

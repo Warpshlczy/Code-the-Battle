@@ -95,7 +95,7 @@ A few design choices:
 ### 2.2 Hard rules
 
 1. **The code really runs.** Your `deal_damage` goes through IR, abstract interpretation, the sandbox and the battle engine, then lands in the event log. Animations are presentation; the result is not pre-scripted.
-2. **The AI cannot see your cards.** It gets the public board and its own hand. Card names, descriptions, your hand, your draw order and your code never enter the prompt.
+2. **The AI cannot see your hidden state.** It gets the public board, its own full hand and the public action log. Your hidden hand, draw order, card source and code never enter the prompt.
 3. **The review can trace every line.** Each API call records its source, line number, credits, damage, block, healing and pile operations. After the battle you can see which line caused what.
 
 ### 2.3 Who it is for
@@ -809,18 +809,18 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 
 **Allowed:**
 
-- public board: both HP, Block, pile counts, discards, turn number;
-- its own hand;
-- its own Energy and deck information;
-- public results of player actions.
+- public board: both HP, Block, Energy, pile and discard counts, turn number and limits;
+- its own full hand: names, descriptions, card source and API tags;
+- its own Energy, plus draw/discard pile counts and limits;
+- the recent public action log, including played cards and their results;
+- its previous plans.
 
 **Not allowed:**
 
-- your card names or descriptions;
-- your hand;
+- your hand contents or unrevealed cards;
+- your card descriptions or source;
 - your draw order;
-- your code;
-- hidden resources or future intent.
+- your code, hidden resources or future intent.
 
 ### 12.3 External LLM (optional)
 
@@ -835,7 +835,7 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - A designed deck must contain at least two attacks, stay inside the total cost cap and compile through the same compiler as player cards. Model output is normalized first: `#` comments become `//`, extra fields and docstrings are removed, missing card text is filled in, and an over-budget effect raises the card's cost instead of rejecting it. Illegal cards are dropped, then the deck is trimmed to the card-count and total-cost caps. If the deck still fails, one corrective round is sent; only after both rounds fail, or on timeout/HTTP errors, does it fall back to the fixed deck.
 - The model only proposes actions and deck source. The rules engine validates and executes them.
 - Deck provenance (fixed vs self-designed, model, prompt hash, tokens, validation note and raw output) is kept in the battle state and shown in the opponent file and exported log.
-- Any invalid, timed-out, over-budget or unparsable **action plan** still falls back to the fixed tactics as a whole, with an audit entry. The parser accepts fenced or prose-wrapped JSON, near-JSON (single quotes, trailing commas, full-width punctuation, raw newlines inside strings), multiple embedded JSON objects, operation aliases and Chinese verbs, plain op sequences and `reasoning_content`, so a well-formed plan is not rejected over formatting.
+- Any structurally invalid, timed-out or unparsable **action plan** still falls back to the fixed tactics as a whole, with an audit entry. A structurally valid plan that runs out of Energy or hand depth stops at that step instead of discarding earlier legal moves. The parser accepts fenced or prose-wrapped JSON, near-JSON (single quotes, trailing commas, full-width punctuation, raw newlines inside strings), multiple embedded JSON objects, operation aliases and Chinese verbs, plain op sequences and `reasoning_content`, so a well-formed plan is not rejected over formatting.
 
 ### 12.4 Fairness
 
@@ -843,7 +843,7 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - Its self-designed deck passes the same compiler, effect cap and comment check as yours.
 - It does not announce intent.
 - It cannot read your code, hand or draw order.
-- Its card names and descriptions never enter the action prompt.
+- Its own card names and descriptions enter the action prompt; yours never do.
 - Before the battle it reveals only its combat style, not its hand or plan.
 
 ---
@@ -1180,7 +1180,7 @@ Yes. Source goes through lexer/parser, IR, abstract interpretation and hard limi
 
 ### Q3: Can the AI peek at my cards or code?
 
-No. The AI receives only the public board and its own hand. Card names, descriptions, your hand, draw order and code never enter the prompt.
+No. The AI receives only the public board and its own hand, including its own card names and descriptions. Your hand, draw order, code and card source never enter the prompt.
 
 ### Q4: Why does my card fail to compile?
 
