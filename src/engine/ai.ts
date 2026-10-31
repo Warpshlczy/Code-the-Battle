@@ -616,8 +616,13 @@ export async function probeAiConnection(config?: AiConfig): Promise<ProbeResult>
   if (!url) {
     return { ok: false, detail: '', latencyMs: 0, url, reason: 'empty' };
   }
+  const model = config?.model || 'gpt-4o-mini';
+  // A reasoning model can take much longer than a plain ping; a short 8–12s
+  // handshake timeout rejects valid endpoints before the battle even starts.
+  const probeFloor = isReasoningModel(model) ? 45_000 : 25_000;
+  const probeTimeout = Math.min(45_000, Math.max(probeFloor, config?.timeoutMs ?? 0));
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Math.max(1500, Math.min(config?.timeoutMs ?? 8000, 12000)));
+  const timeout = setTimeout(() => controller.abort(), probeTimeout);
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -626,10 +631,11 @@ export async function probeAiConnection(config?: AiConfig): Promise<ProbeResult>
         ...(config?.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
       },
       body: JSON.stringify({
-        model: config?.model || 'gpt-4o-mini',
+        model,
         temperature: 0,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'ping' }],
+        ...reasoningEffortPatch(url, model),
       }),
       signal: controller.signal,
     });
@@ -1045,8 +1051,13 @@ function extractPlan(text: string): AiOp[] | null {
   return split ? opsFromItems(split) : null;
 }
 
-/** Upper bound for any external-model request. Late turns may need 2 minutes. */
+/** Upper bound for any external-model request. Slow thinking models need the full two minutes. */
 export const MAX_LLM_TIMEOUT_MS = 120_000;
+
+/** Every plan request gets the full budget from turn one; slow reasoners often exceed a 20s floor. */
+export function externalRequestTimeoutMs(): number {
+  return MAX_LLM_TIMEOUT_MS;
+}
 
 export async function proposeAiPlan(
   view: AiView,
@@ -1085,15 +1096,9 @@ export async function proposeAiPlan(
   // default, and a small output cap ends with finish_reason=length and an
   // empty content field. The prompt instead demands the shortest valid JSON.
   // The timeout still protects the battle loop from a stalled endpoint.
-  const reasoningModel = isReasoningModel(model);
-  // Later turns have more hidden state to weigh, so the allowance grows with
-  // the turn number and is capped at two minutes.
-  const baseTimeout = reasoningModel ? 45000 : 20000;
-  const lateTurnBonus = Math.max(0, view.turn - 1) * 3000;
-  const timeoutMs = Math.min(
-    MAX_LLM_TIMEOUT_MS,
-    Math.max(config.timeoutMs ?? 6000, baseTimeout, baseTimeout + lateTurnBonus),
-  );
+  // Do not ramp up from a short early-turn timeout: reasoners often need more
+  // than 45 seconds even with the extra rules and price tables in the prompt.
+  const timeoutMs = externalRequestTimeoutMs();
   const rawOutputs: string[] = [];
   let tokens = 0;
   let formatFailure = '';
@@ -1866,8 +1871,7 @@ export async function designAiDeck(
   }
   const prompt = buildAiDeckPrompt(persona, lang, registers);
   const promptHash = fnv(prompt);
-  const floor = isReasoningModel(config.model) ? 40000 : 25000;
-  const timeoutMs = Math.min(MAX_LLM_TIMEOUT_MS, Math.max(floor, (config.timeoutMs ?? 8000) * 3));
+  const timeoutMs = externalRequestTimeoutMs();
   const rawOutputs: string[] = [];
   let tokens = 0;
   let lastNote = '';
@@ -1928,24 +1932,30 @@ function now(): number {
 
 /**
  * Reasoning models may put their chain of thought in `reasoning_content` and
- * take much longer before writing the JSON answer, so plan and deck requests
- * give them longer timeouts. DeepSeek Flash/V4 are reasoners by default even
- * though their ids omit "reasoner".
+ * need a long first token, so the connection handshake gets a higher floor.
+ * Plan and deck requests always use the full two-minute budget regardless.
+ * DeepSeek Flash/V4 are reasoners by default even though their ids omit
+ * "reasoner".
  */
 function isReasoningModel(model?: string): boolean {
-  return /reasoner|reasoning|deepseek-(flash|v4|r1)/i.test(model ?? '');
+  return /reasoner|reasoning|thinking|deepseek-(flash|v4|r1)|(?:^|[-_])o[1-4](?:$|[-_])|gpt-5|qwen3|qwq|glm-4\.[56]|kimi-k2|gemini-2\.5/i.test(model ?? '');
 }
 
 /**
- * DeepSeek exposes effort levels for Flash/V4. The lowest level keeps hidden
- * reasoning short so the JSON answer arrives sooner. Other hosts keep the
- * plain request so they do not reject an unknown field.
+ * Known reasoning hosts expose effort levels. The lowest level keeps hidden
+ * reasoning short so the JSON answer arrives sooner. Other hosts and models
+ * keep the plain request so they do not reject an unknown field.
  */
 function reasoningEffortPatch(endpoint: string, model: string): { reasoning_effort?: 'low' } {
-  if (!/(deepseek-(flash|v4))/i.test(model)) return {};
   try {
     const host = new URL(endpoint, 'https://invalid.local').hostname;
-    return /(^|\.)deepseek\.com$/i.test(host) ? { reasoning_effort: 'low' } : {};
+    if (/(deepseek-(flash|v4))/i.test(model) && /(^|\.)deepseek\.com$/i.test(host)) {
+      return { reasoning_effort: 'low' };
+    }
+    if (/(?:^|-)o[1-4](?:$|[-_])|gpt-5/i.test(model) && /(^|\.)openai\.com$/i.test(host)) {
+      return { reasoning_effort: 'low' };
+    }
+    return {};
   } catch {
     return {};
   }

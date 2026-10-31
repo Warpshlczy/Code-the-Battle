@@ -4,6 +4,7 @@ import {
   buildAiPrompt,
   buildAiViewHistory,
   designAiDeck,
+  externalRequestTimeoutMs,
   extractJsonValue,
   heuristicPlan,
   MAX_LLM_TIMEOUT_MS,
@@ -45,8 +46,9 @@ function view(persona: AiPersona): AiView {
 }
 
 describe('opponent contract', () => {
-  it('allows late-game plan requests up to two minutes', () => {
+  it('gives every plan and deck request the full two minutes from turn one', () => {
     expect(MAX_LLM_TIMEOUT_MS).toBe(120_000);
+    expect(externalRequestTimeoutMs()).toBe(120_000);
   });
 
   it('ships exactly the five fixed personas', () => {
