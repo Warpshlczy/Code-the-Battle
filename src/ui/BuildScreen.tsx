@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CardArt, CompileResult, CompiledCard, Diagnostic, RegisterDecl } from '../engine/analyze';
 import { CODE_LIMITS, LIMITS, effectCapForCost } from '../engine/config';
-import { probeAiConnection, type AiConfig, type AiPersona } from '../engine/ai';
+import { probeAiConnection, normalizeEndpoint, type AiConfig, type AiPersona, type ProbeResult } from '../engine/ai';
 import type { DeckSlot } from '../content/deck';
 import { DEFAULT_ART, defaultRegisters, starterCards } from '../content/deck';
 import { useLang, useT, type Lang } from '../i18n';
@@ -80,6 +80,55 @@ export default function BuildScreen(props: Props) {
   const regBlocking = regDiags.filter((d) => d.severity === 'error');
   const art = slots[selected]?.art ?? DEFAULT_ART;
   const llmBusy = aiMode === 'llm' && llmPhase === 'checking';
+  const resolvedEndpoint = normalizeEndpoint(aiConfig.endpoint);
+  const endpointTyped = (aiConfig.endpoint ?? '').trim();
+
+  const describeProbe = (probe: ProbeResult): string => {
+    const raw = probe.detail ? ` · ${probe.detail}` : '';
+    switch (probe.reason) {
+      case 'empty':
+        return t('请先填写外接模型接口地址', 'Enter the external model endpoint first');
+      case 'not_found':
+        return t(
+          `接口返回 HTTP 404：地址不存在。实际请求 ${probe.url}${raw}。协议和 /chat/completions 已自动补全；请确认填的是 API 地址（DeepSeek 是 https://api.deepseek.com），而不是网页域名或错误的中转路径。`,
+          `HTTP 404: address not found. Requested ${probe.url}${raw}. The scheme and /chat/completions are completed automatically; make sure this is the API host (https://api.deepseek.com for DeepSeek), not the website or a wrong proxy path.`,
+        );
+      case 'auth':
+        return t(
+          `接口返回 HTTP ${probe.status}：密钥无效或没有权限。实际请求 ${probe.url}${raw}`,
+          `HTTP ${probe.status}: the key is invalid or lacks permission. Requested ${probe.url}${raw}`,
+        );
+      case 'rate_limited':
+        return t(
+          `接口返回 HTTP 429：请求过多或余额不足。实际请求 ${probe.url}${raw}`,
+          `HTTP 429: too many requests or the balance is empty. Requested ${probe.url}${raw}`,
+        );
+      case 'timeout':
+        return t(
+          `外接模型超时（${probe.latencyMs}ms）。实际请求 ${probe.url}。检查网络、代理和地址。`,
+          `The external model timed out (${probe.latencyMs}ms). Requested ${probe.url}. Check the network, proxy and URL.`,
+        );
+      case 'network':
+        return t(
+          `无法连接外接模型：${probe.detail || '未知错误'}。实际请求 ${probe.url}。可能是网络、CORS 限制或地址错误。`,
+          `Could not reach the external model: ${probe.detail || 'unknown error'}. Requested ${probe.url}. This may be the network, a CORS restriction or a wrong URL.`,
+        );
+      default:
+        return t(
+          `接口返回 HTTP ${probe.status ?? '?'}${raw}。实际请求 ${probe.url}`,
+          `Endpoint returned HTTP ${probe.status ?? '?'}${raw}. Requested ${probe.url}`,
+        );
+    }
+  };
+
+  // DeepSeek rejects the default placeholder model, so follow the endpoint.
+  const updateEndpoint = (endpoint: string) => {
+    const patch: AiConfig = { ...aiConfig, endpoint };
+    if (/deepseek/i.test(endpoint) && (aiConfig.model ?? '').trim() === 'gpt-4o-mini') {
+      patch.model = 'deepseek-chat';
+    }
+    setAiConfig(patch);
+  };
 
   // Any endpoint/key/model change invalidates the previous handshake.
   useEffect(() => {
@@ -101,7 +150,7 @@ export default function BuildScreen(props: Props) {
     if (token !== probeToken.current) return;
     if (!result.ok) {
       setLlmPhase('error');
-      setLlmError(result.detail);
+      setLlmError(describeProbe(result));
       return;
     }
     setLlmPhase('ready');
@@ -581,15 +630,31 @@ export default function BuildScreen(props: Props) {
                   <label className="field-label">{t('接口地址', 'Endpoint')}</label>
                   <input
                     className="input wide"
-                    placeholder="https://…/v1/chat/completions"
+                    placeholder="https://api.deepseek.com"
                     value={aiConfig.endpoint ?? ''}
-                    onChange={(e) => setAiConfig({ ...aiConfig, endpoint: e.target.value })}
+                    onChange={(e) => updateEndpoint(e.target.value)}
                     data-testid="llm-endpoint"
                   />
+                  {resolvedEndpoint && resolvedEndpoint !== endpointTyped && (
+                    <p className="hint" data-testid="llm-endpoint-resolved">
+                      {t(`实际请求：${resolvedEndpoint}`, `Resolved request: ${resolvedEndpoint}`)}
+                    </p>
+                  )}
                   <label className="field-label">{t('外接型号', 'Model')}</label>
-                  <input className="input wide" value={aiConfig.model ?? ''} onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })} />
+                  <input
+                    className="input wide"
+                    placeholder="deepseek-chat / gpt-4o-mini"
+                    value={aiConfig.model ?? ''}
+                    onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
+                  />
                   <label className="field-label">{t('密钥（只留在这个页面）', 'API key (stays on this page only)')}</label>
                   <input className="input wide" type="password" value={aiConfig.apiKey ?? ''} onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })} />
+                  <p className="hint">
+                    {t(
+                      'DeepSeek 示例：地址 https://api.deepseek.com，型号 deepseek-chat，密钥 sk-…。地址末尾的 /chat/completions 会自动补全。',
+                      'DeepSeek example: endpoint https://api.deepseek.com, model deepseek-chat, key sk-…. A missing /chat/completions is appended automatically.',
+                    )}
+                  </p>
                   <p className="hint warn">
                     {t(
                       '外接战术只负责提出出牌顺序，规则引擎会逐条检查。连不上、答得慢或答错，就整份退回固定战术，并写进战后档案。',

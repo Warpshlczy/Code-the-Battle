@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildAiPrompt, heuristicPlan, PERSONA_PROFILE, PERSONA_TEXT, type AiView, type AiPersona } from '../src/engine/ai';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { buildAiPrompt, heuristicPlan, normalizeEndpoint, probeAiConnection, PERSONA_PROFILE, PERSONA_TEXT, type AiView, type AiPersona } from '../src/engine/ai';
 import { PERSONAS } from '../src/engine/battle';
 
 function view(persona: AiPersona): AiView {
@@ -58,5 +58,56 @@ describe('opponent contract', () => {
     const plan = heuristicPlan(v);
     expect(plan.some((o) => o.op === 'play')).toBe(false);
     expect(plan[plan.length - 1].op).toBe('end');
+  });
+});
+
+describe('endpoint normalization', () => {
+  it('appends the chat route to bare hosts and base URLs', () => {
+    expect(normalizeEndpoint('https://api.deepseek.com')).toBe('https://api.deepseek.com/chat/completions');
+    expect(normalizeEndpoint(' https://api.deepseek.com/ ')).toBe('https://api.deepseek.com/chat/completions');
+    expect(normalizeEndpoint('https://api.deepseek.com/v1')).toBe('https://api.deepseek.com/v1/chat/completions');
+  });
+
+  it('adds a scheme to scheme-less input so it never resolves to the site itself', () => {
+    expect(normalizeEndpoint('api.deepseek.com')).toBe('https://api.deepseek.com/chat/completions');
+    expect(normalizeEndpoint('api.deepseek.com/v1/chat/completions')).toBe('https://api.deepseek.com/v1/chat/completions');
+    expect(normalizeEndpoint('localhost:11434/v1')).toBe('http://localhost:11434/v1/chat/completions');
+    expect(normalizeEndpoint('/llm-proxy')).toBe('/llm-proxy/chat/completions');
+  });
+
+  it('keeps complete routes, query strings and blank input intact', () => {
+    expect(normalizeEndpoint('https://api.deepseek.com/chat/completions')).toBe('https://api.deepseek.com/chat/completions');
+    expect(normalizeEndpoint('https://api.deepseek.com/v1/chat/completions')).toBe('https://api.deepseek.com/v1/chat/completions');
+    expect(normalizeEndpoint('https://proxy.local/api/completions?team=blue')).toBe('https://proxy.local/api/completions?team=blue');
+    expect(normalizeEndpoint('')).toBe('');
+    expect(normalizeEndpoint(undefined)).toBe('');
+  });
+});
+
+describe('connection handshake', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('posts to the completed chat route instead of the bare host', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(url);
+      return new Response('{"error":{"message":"Not Found"}}', { status: 404 });
+    }));
+    const result = await probeAiConnection({ endpoint: 'https://api.deepseek.com', model: 'deepseek-chat', apiKey: 'sk-test' });
+    expect(calls).toEqual(['https://api.deepseek.com/chat/completions']);
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(404);
+    expect(result.reason).toBe('not_found');
+    expect(result.url).toBe('https://api.deepseek.com/chat/completions');
+    expect(result.detail).toContain('Not Found');
+  });
+
+  it('accepts a responding endpoint and flags an empty address', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"choices":[]}', { status: 200 })));
+    const ok = await probeAiConnection({ endpoint: 'https://example.test/v1/chat/completions', model: 'deepseek-chat' });
+    expect(ok.ok).toBe(true);
+    const empty = await probeAiConnection({ endpoint: '   ' });
+    expect(empty.ok).toBe(false);
+    expect(empty.reason).toBe('empty');
   });
 });

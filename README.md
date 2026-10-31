@@ -217,7 +217,7 @@ npm test          # vitest run
 npm run test:watch
 ```
 
-The suite covers rules, credits, AI, presentation, balance, replay and smoke flows. There are 8 test files and 53 tests.
+The suite covers rules, credits, AI, presentation, balance, replay and smoke flows. There are 8 test files and 58 tests.
 
 ### 5.5 Scripts
 
@@ -825,7 +825,8 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 ### 12.3 External LLM (optional)
 
 - Switch to **External tactics** during deck building.
-- Fill in a `chat/completions` endpoint, model and key.
+- Fill in a `chat/completions` endpoint, model and key. Host-only input works too: `api.deepseek.com` becomes `https://api.deepseek.com/chat/completions`.
+- DeepSeek example: endpoint `https://api.deepseek.com`, model `deepseek-chat`, key `sk-…`. Choosing a DeepSeek endpoint also replaces the untouched default model with `deepseek-chat`.
 - The key stays in page memory; it is not written to localStorage or a backend.
 - Browser requests require the endpoint to allow CORS.
 - Any invalid, timed-out, over-budget or unparsable response falls back to the fixed tactics as a whole, with an audit entry.
@@ -1138,7 +1139,7 @@ npm test
 npm run build
 ```
 
-There are 8 test files and 53 tests. The build output is in `dist/`.
+There are 8 test files and 58 tests. The build output is in `dist/`.
 
 ### 17.3 When changing rules
 

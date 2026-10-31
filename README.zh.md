@@ -217,7 +217,7 @@ npm test          # vitest run
 npm run test:watch
 ```
 
-测试覆盖规则、算力、AI、演出、平衡、重放和冒烟流程。当前有 8 个测试文件、53 项测试。
+测试覆盖规则、算力、AI、演出、平衡、重放和冒烟流程。当前有 8 个测试文件、58 项测试。
 
 ### 5.5 脚本一览
 
@@ -825,7 +825,8 @@ ctx.gain_energy(3)
 ### 12.3 外接 LLM（可选）
 
 - 构筑期切到“外接战术”。
-- 填写兼容 `chat/completions` 的端点、模型和 Key。
+- 填写兼容 `chat/completions` 的端点、模型和 Key。也可以只填域名：`api.deepseek.com` 会自动补成 `https://api.deepseek.com/chat/completions`。
+- DeepSeek 示例：地址 `https://api.deepseek.com`，型号 `deepseek-chat`，Key `sk-…`。地址含 deepseek 时，未修改过的默认型号会自动切到 `deepseek-chat`。
 - Key 只留在页面内存，不写入 localStorage 或后端。
 - 浏览器直连需要端点允许 CORS。
 - 任何非法、超时、超预算或解析失败都会**整份回退**到固定战术，并写入审计。
@@ -1140,7 +1141,7 @@ npm test
 npm run build
 ```
 
-当前 8 个测试文件、53 项测试。构建产物在 `dist/`。
+当前 8 个测试文件、58 项测试。构建产物在 `dist/`。
 
 ### 17.3 修改规则时的建议
 

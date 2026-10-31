@@ -264,25 +264,71 @@ export function buildAiPrompt(view: AiView): string {
 }
 
 /**
+ * Accept host-only, base and full URLs alike. Scheme-less input would be
+ * resolved against the static site itself (GitHub Pages answers 404), so
+ * https:// is added, and the OpenAI-compatible route `/chat/completions` is
+ * appended when the typed URL does not already end with it. Query strings and
+ * relative proxy paths are preserved.
+ */
+export function normalizeEndpoint(raw?: string): string {
+  let trimmed = (raw ?? '').trim();
+  if (!trimmed) return '';
+  // A scheme-less host such as "api.deepseek.com" would be resolved against the
+  // static site and answer with the site's 404 page. Add a scheme, using http
+  // for local model servers.
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
+    const local = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|\/|$)/i.test(trimmed);
+    trimmed = `${local ? 'http' : 'https'}://${trimmed}`;
+  }
+  const hashAt = trimmed.indexOf('#');
+  const noHash = hashAt >= 0 ? trimmed.slice(0, hashAt) : trimmed;
+  const queryAt = noHash.indexOf('?');
+  const path = (queryAt >= 0 ? noHash.slice(0, queryAt) : noHash).replace(/\/+$/, '');
+  const tail = queryAt >= 0 ? noHash.slice(queryAt) : '';
+  if (!path) return trimmed;
+  if (/\/(chat\/)?completions$/i.test(path)) return `${path}${tail}`;
+  return `${path}/chat/completions${tail}`;
+}
+
+export interface ProbeResult {
+  ok: boolean;
+  /** Raw response body or transport error, kept untranslated. */
+  detail: string;
+  latencyMs: number;
+  /** URL that was actually requested, after normalization. */
+  url: string;
+  status?: number;
+  reason?: 'empty' | 'auth' | 'not_found' | 'rate_limited' | 'http' | 'timeout' | 'network';
+}
+
+function probeReason(status: number): ProbeResult['reason'] {
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 404) return 'not_found';
+  if (status === 429) return 'rate_limited';
+  return 'http';
+}
+
+/**
  * Lightweight pre-battle handshake. It sends a one-token ping instead of a full
  * plan, so choosing LLM mode never spends a full turn's output budget.
  */
-export async function probeAiConnection(config?: AiConfig): Promise<{ ok: boolean; detail: string; latencyMs: number }> {
+export async function probeAiConnection(config?: AiConfig): Promise<ProbeResult> {
   const started = now();
-  if (!config?.endpoint?.trim()) {
-    return { ok: false, detail: '请先填写外接模型接口地址', latencyMs: 0 };
+  const url = normalizeEndpoint(config?.endpoint);
+  if (!url) {
+    return { ok: false, detail: '', latencyMs: 0, url, reason: 'empty' };
   }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Math.max(1500, Math.min(config.timeoutMs ?? 8000, 12000)));
+  const timeout = setTimeout(() => controller.abort(), Math.max(1500, Math.min(config?.timeoutMs ?? 8000, 12000)));
   try {
-    const res = await fetch(config.endpoint, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+        ...(config?.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
       },
       body: JSON.stringify({
-        model: config.model || 'gpt-4o-mini',
+        model: config?.model || 'gpt-4o-mini',
         temperature: 0,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'ping' }],
@@ -297,17 +343,17 @@ export async function probeAiConnection(config?: AiConfig): Promise<{ ok: boolea
       } catch {
         detail = '';
       }
-      return { ok: false, detail: `接口返回 HTTP ${res.status}${detail ? `：${detail}` : ''}`, latencyMs };
+      return { ok: false, detail, latencyMs, url, status: res.status, reason: probeReason(res.status) };
     }
-    return { ok: true, detail: '外接模型已响应', latencyMs };
+    return { ok: true, detail: '', latencyMs, url };
   } catch (err) {
     const latencyMs = Math.round(now() - started);
     return {
       ok: false,
-      detail: controller.signal.aborted
-        ? '外接模型响应超时'
-        : `无法连接外接模型：${err instanceof Error ? err.message : String(err)}`,
+      detail: err instanceof Error ? err.message : String(err),
       latencyMs,
+      url,
+      reason: controller.signal.aborted ? 'timeout' : 'network',
     };
   } finally {
     clearTimeout(timeout);
@@ -345,7 +391,8 @@ export async function proposeAiPlan(
   persona: AiPersona,
 ): Promise<{ plan: AiPlan; meta: AiMeta }> {
   const started = now();
-  if (mode !== 'llm' || !config?.endpoint) {
+  const endpoint = normalizeEndpoint(config?.endpoint);
+  if (mode !== 'llm' || !endpoint || !config) {
     const ops = heuristicPlan(view);
     return {
       plan: { ops, source: 'heuristic' },
@@ -372,7 +419,7 @@ export async function proposeAiPlan(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.timeoutMs ?? 6000);
   try {
-    const res = await fetch(config.endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
