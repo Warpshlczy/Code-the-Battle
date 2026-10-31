@@ -95,7 +95,7 @@ A few design choices:
 ### 2.2 Hard rules
 
 1. **The code really runs.** Your `deal_damage` goes through IR, abstract interpretation, the sandbox and the battle engine, then lands in the event log. Animations are presentation; the result is not pre-scripted.
-2. **The AI cannot see your hidden state.** It gets the public board, its own full hand and the public action log. Your hidden hand, draw order, card source and code never enter the prompt.
+2. **The AI cannot see your hidden state.** It gets the public board, its own full hand, its own draw and discard piles and the public action log. Your hidden hand, draw order, card source and code never enter the prompt.
 3. **The review can trace every line.** Each API call records its source, line number, credits, damage, block, healing and pile operations. After the battle you can see which line caused what.
 
 ### 2.3 Who it is for
@@ -811,7 +811,8 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 
 - public board: both HP, Block, Energy, pile and discard counts, turn number and limits;
 - its own full hand: names, descriptions, card source and API tags;
-- its own Energy, plus draw/discard pile counts and limits;
+- its own draw pile and discard pile contents (names, costs, types, targets, descriptions and API tags), with the draw pile in draw order;
+- its own Energy and per-turn Energy maximum, plus hand/draw limits;
 - the recent public action log, including played cards and their results;
 - its previous plans.
 
@@ -829,13 +830,14 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - DeepSeek example: endpoint `https://api.deepseek.com`, model `deepseek-chat`, key `sk-…`. Choosing a DeepSeek endpoint also replaces the untouched default model with `deepseek-chat`.
 - The key stays in page memory; it is not written to localStorage or a backend.
 - Browser requests require the endpoint to allow CORS.
-- Models that think by default (such as `deepseek-flash` / `deepseek-v4`) share `max_tokens` between hidden reasoning and the final JSON. For those ids the game raises the plan/deck token budgets, asks for `reasoning_effort: low` and extends the timeout, so the answer is not truncated before it starts.
+- Plan and deck requests omit `max_tokens`, so a thinking model cannot spend the whole output budget before writing its answer. The prompt instead demands the shortest valid JSON; for `deepseek-flash` / `deepseek-v4` the game also asks for `reasoning_effort: low` and extends the timeout.
+- Both the deck-design and battle prompts list every card-callable API, the resource ledger (Energy per turn, costs, draw/reshuffle, hand and pile limits), the turn number, both sides' HP and Block, and the public battle log. They also tell the model it may use basic arithmetic, comparisons, sorting, conditionals and loops to plan a resource-maximizing sequence.
 - After the handshake, SENTINEL designs its own 5–10 card deck through the external model.
 - Every designed card must declare cost/type/target, expose only `effect(self, ctx)` and carry a trailing `//` comment. The comment becomes the card description on its face and in its deck.
 - A designed deck must contain at least two attacks, stay inside the total cost cap and compile through the same compiler as player cards. Model output is normalized first: `#` comments become `//`, extra fields and docstrings are removed, missing card text is filled in, and an over-budget effect raises the card's cost instead of rejecting it. Illegal cards are dropped, then the deck is trimmed to the card-count and total-cost caps. If the deck still fails, one corrective round is sent; only after both rounds fail, or on timeout/HTTP errors, does it fall back to the fixed deck.
 - The model only proposes actions and deck source. The rules engine validates and executes them.
 - Deck provenance (fixed vs self-designed, model, prompt hash, tokens, validation note and raw output) is kept in the battle state and shown in the opponent file and exported log.
-- Any structurally invalid, timed-out or unparsable **action plan** still falls back to the fixed tactics as a whole, with an audit entry. A structurally valid plan that runs out of Energy or hand depth stops at that step instead of discarding earlier legal moves. The parser accepts fenced or prose-wrapped JSON, near-JSON (single quotes, trailing commas, full-width punctuation, raw newlines inside strings), multiple embedded JSON objects, operation aliases and Chinese verbs, plain op sequences and `reasoning_content`, so a well-formed plan is not rejected over formatting.
+- A structurally invalid **action plan** gets at most one corrective request with an explicit format reminder; only if both attempts fail (or the request times out / returns an HTTP error) does the turn fall back to the fixed tactics as a whole, with an audit entry. A structurally valid plan that runs out of Energy or hand depth stops at that step instead of discarding earlier legal moves. The parser accepts fenced or prose-wrapped JSON, near-JSON (single quotes, trailing commas, full-width punctuation, raw newlines inside strings), multiple embedded JSON objects, operation aliases and Chinese verbs, plain op sequences and `reasoning_content`, so a well-formed plan is not rejected over formatting.
 
 ### 12.4 Fairness
 
@@ -843,7 +845,7 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - Its self-designed deck passes the same compiler, effect cap and comment check as yours.
 - It does not announce intent.
 - It cannot read your code, hand or draw order.
-- Its own card names and descriptions enter the action prompt; yours never do.
+- Its own card names, descriptions and pile contents enter the action prompt; yours never do.
 - Before the battle it reveals only its combat style, not its hand or plan.
 
 ---
@@ -1180,7 +1182,7 @@ Yes. Source goes through lexer/parser, IR, abstract interpretation and hard limi
 
 ### Q3: Can the AI peek at my cards or code?
 
-No. The AI receives only the public board and its own hand, including its own card names and descriptions. Your hand, draw order, code and card source never enter the prompt.
+No. The AI receives the public board, its own hand (including its own card names and descriptions), its own draw and discard piles and the public action log. Your hand, draw order, code and card source never enter the prompt.
 
 ### Q4: Why does my card fail to compile?
 

@@ -18,6 +18,7 @@ import {
 } from '../src/engine/ai';
 import { compileCard } from '../src/engine/analyze';
 import { Battle, PERSONAS } from '../src/engine/battle';
+import { API_SPECS } from '../src/engine/config';
 
 function view(persona: AiPersona): AiView {
   return {
@@ -59,8 +60,26 @@ describe('opponent contract', () => {
     }
   });
 
-  it('sends its own hand, public history and the API guide to the model', () => {
+  it('sends its own hand, piles, resources, public history and the API guide to the model', () => {
     const v = view('aggressor');
+    v.self.energyMax = 5;
+    v.self.handLimit = 10;
+    v.self.drawLimit = 10;
+    v.self.drawPile = [
+      {
+        slot: 0,
+        name: '后手补给',
+        cost: 1,
+        type: 'skill',
+        target: 'self',
+        description: '获得 2 能量',
+        api: ['gain_energy'],
+        source: 'class PileSource(Card):\n    def effect(self, ctx):\n        ctx.gain_energy(2)',
+      },
+    ];
+    v.self.discardPile = [
+      { slot: 0, name: '旧盾', cost: 1, type: 'skill', target: 'self', description: '获得 6 格挡', api: ['gain_block'] },
+    ];
     v.self.hand[0] = {
       ...v.self.hand[0],
       name: '处决斩',
@@ -76,10 +95,24 @@ describe('opponent contract', () => {
     expect(prompt).toContain('处决斩');
     expect(prompt).toContain('造成 12 点伤害');
     expect(prompt).toContain('ctx.deal_damage');
+    expect(prompt).toContain('后手补给');
+    expect(prompt).toContain('旧盾');
+    expect(prompt).not.toContain('class PileSource(Card)');
+    expect(prompt).toContain('"drawPile"');
+    expect(prompt).toContain('"discardPile"');
+    expect(prompt).toContain('"energyMax":5');
+    expect(prompt).toContain('【资源账本】');
+    expect(prompt).toContain('【自己的牌组】');
+    expect(prompt).toContain('【算法辅助】');
     expect(prompt).toContain('公开场面');
     expect(prompt).toContain('recentEvents');
     expect(prompt).toContain('previousPlans');
     expect(prompt).toContain('opponent_public');
+    for (const api of API_SPECS.filter((spec) => spec.scope !== 'script')) {
+      expect(prompt).toContain(`ctx.${api.name}(`);
+    }
+    expect(prompt).not.toContain('ctx.playcard(');
+    expect(prompt).not.toContain('ctx.set_global(');
   });
 
   it('keeps hidden player piles, registers, code and logs out of the history', () => {
@@ -195,24 +228,44 @@ describe('plan parsing tolerance', () => {
     expect(plan.ops.map((o) => o.op)).toEqual(['play', 'end']);
   });
 
-  it('reserves a reasoning budget for DeepSeek Flash instead of starving the answer', async () => {
-    let body: { max_tokens?: number; reasoning_effort?: string } | undefined;
+  it('omits the token cap for DeepSeek Flash and asks for the shortest JSON', async () => {
+    let body: { max_tokens?: number; reasoning_effort?: string; messages?: { role: string; content: string }[] } | undefined;
     vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
       body = JSON.parse(String(init?.body));
       return planResponse({ content: '{"ops":[{"op":"play"},{"op":"end"}]}' });
     }));
     const { plan, meta } = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-flash' }, 'aggressor');
-    expect(body?.max_tokens).toBe(2000);
+    expect(body?.max_tokens).toBeUndefined();
     expect(body?.reasoning_effort).toBe('low');
+    expect(body?.messages?.[1].content).toContain('尽可能短');
     expect(plan.source).toBe('llm');
     expect(meta.validation).toBe('格式通过');
   });
 
-  it('falls back to the local tactic when the text holds no plan', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => planResponse({ content: '我会先观察一下。' })));
+  it('accepts a valid plan on the single format retry', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(planResponse({ content: '我会先观察一下。' }))
+      .mockResolvedValueOnce(planResponse({ content: '{"ops":[{"op":"discard"},{"op":"end"}]}' }));
+    vi.stubGlobal('fetch', fetchMock);
     const { plan, meta } = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retryBody = JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body));
+    expect(retryBody.messages[1].content).toContain('格式重试');
+    expect(plan.source).toBe('llm');
+    expect(plan.ops.map((op) => op.op)).toEqual(['discard', 'end']);
+    expect(meta.validation).toBe('格式通过（第 2 次尝试）');
+    expect(meta.tokens).toBe(24);
+  });
+
+  it('retries at most once before falling back to the local tactic', async () => {
+    const fetchMock = vi.fn(async () => planResponse({ content: '我会先观察一下。' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { plan, meta } = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(plan.source).toBe('heuristic');
+    expect(meta.validation).toBe('失败：格式（已重试 1 次）');
     expect(meta.fallbackReason).toContain('不是合法的动作计划');
+    expect(meta.fallbackReason).toContain('已重试 1 次');
     expect(plan.ops[plan.ops.length - 1].op).toBe('end');
   });
 
@@ -365,12 +418,21 @@ describe('SENTINEL deck design', () => {
     }), { status: 200 });
   }
 
-  it('asks for self-designed cards with comments and legal APIs', () => {
+  it('asks for short self-designed cards and lists every card-callable API', () => {
     const prompt = buildAiDeckPrompt('controller', 'zh');
+    expect(prompt).toContain('尽可能短');
     expect(prompt).toContain('//');
     expect(prompt).toContain('至少设计 2 张 "attack" 牌');
-    expect(prompt).toContain('ctx.deal_damage');
     expect(prompt).toContain('不超过 12');
+    expect(prompt).toContain('资源账本');
+    expect(prompt).toContain('if/elif/else');
+    expect(prompt).toContain('for/while');
+    expect(prompt).toContain('静态最坏值');
+    for (const api of API_SPECS.filter((spec) => spec.scope !== 'script')) {
+      expect(prompt).toContain(`ctx.${api.name}(`);
+    }
+    expect(prompt).not.toContain('ctx.playcard(');
+    expect(prompt).not.toContain('ctx.set_global(');
   });
 
   it('accepts a valid deck and rejects short, non-attacking or uncommented decks', async () => {

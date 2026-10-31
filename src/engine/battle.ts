@@ -622,6 +622,16 @@ export class Battle {
   private buildAiView(): AiView {
     const own = this.enemy;
     const foe = this.player;
+    const cardView = (c: CardInstance, slot: number, withSource: boolean) => ({
+      slot,
+      name: c.name,
+      cost: c.cost,
+      type: c.type,
+      target: c.target,
+      description: c.description,
+      ...(withSource ? { source: c.compiled?.source ?? '' } : {}),
+      api: [...new Set(c.compiled?.apiUses.map((u) => u.name) ?? [])],
+    });
     return {
       turn: this.turn,
       self: {
@@ -629,16 +639,10 @@ export class Battle {
         maxHp: own.maxHp,
         block: own.block,
         energy: own.energy,
-        hand: own.piles.hand.map((c, i) => ({
-          slot: i,
-          name: c.name,
-          cost: c.cost,
-          type: c.type,
-          target: c.target,
-          description: c.description,
-          source: c.compiled?.source ?? '',
-          api: [...new Set(c.compiled?.apiUses.map((u) => u.name) ?? [])],
-        })),
+        energyMax: ENERGY_PER_TURN,
+        hand: own.piles.hand.map((c, i) => cardView(c, i, true)),
+        drawPile: own.piles.draw.map((c, i) => cardView(c, i, false)),
+        discardPile: own.piles.discard.map((c, i) => cardView(c, i, false)),
         drawCount: own.piles.draw.length,
         discardCount: own.piles.discard.length,
         handLimit: LIMITS.deck.handCap,
@@ -649,6 +653,7 @@ export class Battle {
         maxHp: foe.maxHp,
         block: foe.block,
         energy: foe.energy,
+        energyMax: ENERGY_PER_TURN,
         handCount: foe.piles.hand.length,
         drawCount: foe.piles.draw.length,
         discardCount: foe.piles.discard.length,

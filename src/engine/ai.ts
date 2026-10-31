@@ -2,10 +2,11 @@
  * AI fairness boundary
  * --------------------
  * The opponent receives its own hand (names, descriptions, card source and API
- * tags), the public battlefield numbers and a sanitized public action log. It never
- * receives the player's hand contents, draw order, code, hidden registers or future
- * intent. LLM output is a *proposal*; the engine validates it and may replace the
- * whole plan with a deterministic policy.
+ * tags), its own draw and discard piles (without source), the public battlefield
+ * numbers and a sanitized public action log. It never receives the player's hand
+ * contents, draw order, code, hidden registers or future intent. LLM output is a
+ * *proposal*; the engine validates it and may replace the whole plan with a
+ * deterministic policy.
  */
 
 import { compileCard, type CompiledCard } from './analyze';
@@ -59,6 +60,11 @@ export interface AiView {
     block: number;
     energy: number;
     hand: AiViewCard[];
+    /** Own draw pile in draw order, summarized without source code. */
+    drawPile?: AiViewCard[];
+    /** Own discard pile; it reshuffles when the draw pile is empty. */
+    discardPile?: AiViewCard[];
+    energyMax?: number;
     drawCount: number;
     discardCount: number;
     handLimit?: number;
@@ -69,6 +75,7 @@ export interface AiView {
     maxHp: number;
     block: number;
     energy?: number;
+    energyMax?: number;
     handCount: number;
     drawCount: number;
     discardCount: number;
@@ -369,25 +376,43 @@ export function buildAiPrompt(view: AiView): string {
     api: card.api,
     ...(card.source ? { source: card.source } : {}),
   }));
+  const pileCard = (card: AiViewCard) => ({
+    slot: card.slot,
+    name: card.name ?? '',
+    cost: card.cost,
+    type: card.type,
+    target: card.target,
+    description: card.description ?? '',
+    api: card.api,
+  });
   const state = {
     persona: view.persona,
     doctrine: PERSONA_TEXT[view.persona],
     turn: view.turn,
     maxTurns: view.history?.maxTurns ?? 30,
-    self: { ...view.self, hand },
+    self: {
+      ...view.self,
+      hand,
+      drawPile: (view.self.drawPile ?? []).map(pileCard),
+      discardPile: (view.self.discardPile ?? []).map(pileCard),
+    },
     opponent_public: view.opponent,
     recentEvents: view.history?.recentEvents ?? [],
     previousPlans: view.history?.previousPlans ?? [],
   };
   return [
     '你是回合制卡牌战斗的敌方牌手 SENTINEL-07。目标是在对手之前把其生命降到 0；若到达 30 回合上限，则按双方剩余生命比例判定。',
-    '只输出一个合法 JSON 对象，不要 Markdown 代码块，不要解释，不要输出 JSON 之外的任何字符。',
+    '只输出一个尽可能短的合法 JSON 对象，不要 Markdown 代码块，不要解释，不要输出 JSON 之外的任何字符。',
     '格式：{"ops":[{"op":"play"},{"op":"end"}]}。ops 必须是数组；每个元素只能包含 op 字段。',
     'op 只能是 play/discard/end；最多 20 项；必须以 end 结尾，end 之后不要再写任何操作。',
     'play/discard 只作用于最左牌；play 先支付最左牌的费用再执行效果，卡牌的 gain_energy 会立即补充能量，draw 抽到的牌会进入手牌右侧；若某一步能量或手牌不足，行动会在该步中断，所以计划必须保证每一步都付得起；discard 不花能量、不触发效果。',
     '【战斗规则】双方初始 100 HP；你的能量每回合恢复到 5；格挡在下个自己回合开始时清零；每回合手牌补到 5 张，手牌上限 10；回合结束时未打出的手牌全部进入弃牌堆。',
-    '【决策重点】先检查能否斩杀：把本回合可负担的伤害与对手 HP + 格挡比较，能斩杀就优先打满；否则比较伤害、格挡、治疗、抽牌、回能的实际收益，注意最左牌顺序，必要时用 discard 移走挡路牌；结合 recentEvents 与 previousPlans 识别对手节奏，避免重复失败计划。',
-    '【卡牌 API 说明】你会在 self.hand 中拿到自己的 name/cost/type/target/description/source 与 api 列表。source 是受限 Python 卡牌实现，仅用于理解效果；卡牌最多 20 行且只能使用以下 API：',
+    '【资源账本】energy 是当前可用能量，energyMax 是每回合恢复值（5），未用能量不跨回合保留；每张牌的 cost 在 play 时先扣除，gain_energy/lose_energy 立即改变 energy。draw 从 drawPile 顶部抽取；抽牌堆耗尽时 discardPile 洗回。卡牌效果只花能量，不消耗算力（算力只属于玩家回合脚本）。',
+    '【自己的牌组】self.hand、self.drawPile、self.discardPile 合起来就是你这局的全部剩余牌；drawPile 按抽牌顺序排列，discardPile 按弃置顺序排列；opponent_public 只给公开张数，不包含玩家牌面。',
+    '【构筑资源】你的牌组为 5-10 张、总费用不超过 12；卡牌效果上限 P 由费用决定（0→1.5、1→2.4、2→3.2、3→4.2、4→5.5、5→6.4），循环内的 API 调用会按最大迭代次数累计。',
+    '【决策重点】先检查能否斩杀：把本回合可负担的伤害与对手 HP + 格挡比较，能斩杀就优先打满；否则比较伤害、格挡、治疗、抽牌、回能的实际收益，注意最左牌顺序，必要时用 discard 移走挡路牌；结合 recentEvents、previousPlans 与自己的 drawPile 识别对手节奏和未来抽牌，避免重复失败计划。',
+    '【算法辅助】你可以在分析时使用基础算术、比较、排序、条件分支和循环枚举候选出牌序列，先算能量、伤害、格挡、治疗、抽牌净值，再选择最优顺序；最终仍然只输出 JSON 动作计划。',
+    '【卡牌 API 说明】你会在 self.hand 中拿到自己的 name/cost/type/target/description/source 与 api 列表。source 是受限 Python 卡牌实现，仅用于理解效果；卡牌最多 20 行，effect 内可调用以下全部 API（playcard/set_global 仅属于玩家回合脚本，卡牌不可用）：',
     '  ctx.deal_damage("enemy" | "self", n)  造成 n 伤害，先扣格挡再扣 HP',
     '  ctx.gain_block(n)  获得 n 格挡，持续到自己的下个回合开始',
     '  ctx.heal(n)  回复 n HP，不超过上限',
@@ -921,71 +946,88 @@ export async function proposeAiPlan(
     latencyMs: 0,
   };
   const model = config.model || 'gpt-4o-mini';
-  // DeepSeek Flash/V4 think by default, and the reasoning tokens share the
-  // max_tokens budget. A 400-token plan cap ends with finish_reason=length and
-  // an empty content field, so those models need a much larger budget and a
-  // longer timeout even though their name does not say "reasoner".
+  // The plan request deliberately omits max_tokens: DeepSeek Flash/V4 think by
+  // default, and a small output cap ends with finish_reason=length and an
+  // empty content field. The prompt instead demands the shortest valid JSON.
+  // The timeout still protects the battle loop from a stalled endpoint.
   const reasoningModel = isReasoningModel(model);
-  const controller = new AbortController();
   const timeoutMs = reasoningModel
-    ? Math.max(config.timeoutMs ?? 6000, 25000)
-    : config.timeoutMs ?? 6000;
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        // Reasoners spend tokens on hidden reasoning before the JSON answer,
-        // so they need a larger output budget or the plan gets cut mid-object.
-        max_tokens: reasoningModel ? 2000 : 400,
-        messages: [
-          { role: 'system', content: '你是严格的 JSON 计划提议器，只输出 JSON，不要 Markdown 代码块。' },
-          { role: 'user', content: prompt },
-        ],
-        ...(supportsJsonMode(endpoint, model) ? { response_format: { type: 'json_object' } } : {}),
-        ...reasoningEffortPatch(endpoint, model),
-      }),
-      signal: controller.signal,
-    });
-    meta.latencyMs = Math.round(now() - started);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = (await res.json()) as {
-      choices?: { message?: { content?: unknown; reasoning_content?: unknown } }[];
-      usage?: { total_tokens?: number };
-    };
-    const message = json.choices?.[0]?.message;
-    const content = messageText(message?.content);
-    const reasoning = messageText(message?.reasoning_content);
-    meta.rawOutput = [content, reasoning]
-      .filter((part) => part.trim())
-      .join('\n---\n')
-      .slice(0, 2000);
-    meta.tokens = json.usage?.total_tokens;
-    // A reasoner may put the JSON in either field, so try both instead of
-    // trusting whichever one happens to be non-empty.
-    const ops = extractPlan(content) ?? extractPlan(reasoning);
-    if (!ops) {
-      meta.fallbackReason = '外部模型的输出不是合法的动作计划';
-      meta.validation = '失败：格式';
-      const fallback = heuristicPlan(view);
-      return { plan: { ops: fallback, source: 'heuristic' }, meta: { ...meta, finalPlan: fallback } };
+    ? Math.max(config.timeoutMs ?? 6000, 45000)
+    : Math.max(config.timeoutMs ?? 6000, 20000);
+  const rawOutputs: string[] = [];
+  let tokens = 0;
+  let formatFailure = '';
+  let transportFailure = '';
+  // One corrective round only: an invalid plan gets a second request with an
+  // explicit format reminder, then the engine falls back to its local policy.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const retryNote = attempt === 0
+      ? ''
+      : '\n\n【格式重试】上一次输出不是合法的动作计划。只输出一个尽可能短的合法 JSON 对象，例如 {"ops":[{"op":"play"},{"op":"end"}]}；不要解释、不要 Markdown、不要 JSON 之外的任何字符。';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          messages: [
+            { role: 'system', content: '你是严格的 JSON 计划提议器，只输出 JSON，不要 Markdown 代码块。' },
+            { role: 'user', content: `${prompt}${retryNote}` },
+          ],
+          ...(supportsJsonMode(endpoint, model) ? { response_format: { type: 'json_object' } } : {}),
+          ...reasoningEffortPatch(endpoint, model),
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = (await res.json()) as {
+        choices?: { message?: { content?: unknown; reasoning_content?: unknown } }[];
+        usage?: { total_tokens?: number };
+      };
+      const message = json.choices?.[0]?.message;
+      const content = messageText(message?.content);
+      const reasoningText = messageText(message?.reasoning_content);
+      rawOutputs.push([content, reasoningText].filter((part) => part.trim()).join('\n---\n'));
+      tokens += json.usage?.total_tokens ?? 0;
+      // A reasoner may put the JSON in either field, so try both instead of
+      // trusting whichever one happens to be non-empty.
+      const ops = extractPlan(content) ?? extractPlan(reasoningText);
+      if (ops) {
+        meta.latencyMs = Math.round(now() - started);
+        meta.rawOutput = rawOutputs.join('\n---\n').slice(0, 3000);
+        meta.tokens = tokens > 0 ? tokens : undefined;
+        meta.validation = attempt === 0 ? '格式通过' : '格式通过（第 2 次尝试）';
+        return { plan: { ops, source: 'llm' }, meta: { ...meta, finalPlan: ops } };
+      }
+      formatFailure = attempt === 0
+        ? '外部模型的输出不是合法的动作计划'
+        : '外部模型的输出不是合法的动作计划（已重试 1 次）';
+    } catch (err) {
+      transportFailure = controller.signal.aborted
+        ? '外部模型超时'
+        : `外部模型调用失败：${err instanceof Error ? err.message : String(err)}`;
+      break;
+    } finally {
+      clearTimeout(timeout);
     }
-    meta.validation = '格式通过';
-    return { plan: { ops, source: 'llm' }, meta: { ...meta, finalPlan: ops } };
-  } catch (err) {
-    meta.latencyMs = Math.round(now() - started);
-    meta.fallbackReason = controller.signal.aborted ? '外部模型超时' : `外部模型调用失败：${err instanceof Error ? err.message : String(err)}`;
-    const fallback = heuristicPlan(view);
-    return { plan: { ops: fallback, source: 'heuristic' }, meta: { ...meta, finalPlan: fallback } };
-  } finally {
-    clearTimeout(timeout);
   }
+  meta.latencyMs = Math.round(now() - started);
+  meta.rawOutput = rawOutputs.filter((part) => part.trim()).join('\n---\n').slice(0, 3000) || undefined;
+  meta.tokens = tokens > 0 ? tokens : undefined;
+  if (formatFailure && transportFailure) {
+    meta.fallbackReason = `${formatFailure}；重试时${transportFailure}`;
+  } else {
+    meta.fallbackReason = transportFailure || formatFailure;
+  }
+  if (formatFailure && !transportFailure) meta.validation = '失败：格式（已重试 1 次）';
+  const fallback = heuristicPlan(view);
+  return { plan: { ops: fallback, source: 'heuristic' }, meta: { ...meta, finalPlan: fallback } };
 }
 
 function messageText(content: unknown): string {
@@ -1036,7 +1078,7 @@ export function buildAiDeckPrompt(persona: AiPersona, lang: 'zh' | 'en'): string
   return [
     `你是回合制卡牌战斗的敌方牌手 SENTINEL-07。战斗风格：${PERSONA_TEXT[persona]}`,
     `现在为这一局亲手设计 ${AI_DECK_TARGET} 张卡牌。你和你对面的人类玩家使用同一套规则。`,
-    '只输出一个合法 JSON 对象，不要 Markdown 代码块，不要解释，不要输出 JSON 之外的任何字符：',
+    '只输出一个尽可能短的合法 JSON 对象，不要 Markdown 代码块，不要解释，不要输出 JSON 之外的任何字符：',
     '{"cards":[{"source":"每张牌完整的源码"}]}',
     'source 必须是完整字符串；下面是一张牌的完整源码：',
     exampleSource,
@@ -1047,25 +1089,34 @@ export function buildAiDeckPrompt(persona: AiPersona, lang: 'zh' | 'en'): string
     `- 一共 ${AI_DECK_MIN}-${AI_DECK_MAX} 张牌；推荐正好 ${AI_DECK_TARGET} 张，整套牌总费用（每张 cost 相加）不超过 ${AI_DECK_COST_CAP}。`,
     '- cost 是 0-5 的整数；type 只能是 "attack" 或 "skill"；target 只能是 "enemy"、"self" 或 "none"。',
     `- 每张牌的 name 是 1-16 个字符；卡名和注释必须用${cardLang}。`,
-    '- 只开放 effect(self, ctx)。每张卡最多 20 行，禁止 import、文件、网络、eval、递归、额外类、列表、字典、f-string 和三引号。',
+    '- 只开放 effect(self, ctx)。每张卡最多 20 行，禁止 import、文件、网络、eval、递归、额外类、自建列表/字典、f-string 和三引号；API 返回的只读快照可以读取。',
     `- 每张牌至少要有一处行尾 // 注释（不要用 #），用${cardLang}写清楚这张牌做什么；注释会显示在卡面上，不能为空。`,
     '- 至少设计 2 张 "attack" 牌。',
     '- 不要声明 name/cost/type/target 之外的类字段（例如 rarity、description）。',
-    '- 只能用这些 ctx API：',
-    '  ctx.deal_damage("enemy" | "self", int)',
+    '- 先规划整套牌的资源循环：攻击牌负责斩杀，其余牌围绕格挡、抽牌、回能、调序补足；每张牌的类型和功能要能互相配合。',
+    '- 资源账本：每回合 5 能量；卡牌先扣 cost 再结算；能量不跨回合保留；手牌每回合补到 5、上限 10；回合结束未打出的手牌全部弃置；卡牌效果不消耗算力（算力只属于玩家回合脚本）；整套牌总费用不超过 12。',
+    '- 可使用基础语法把有限资源最大化：局部变量、算术、比较、if/elif/else、for/while（上界必须是可静态确定的常量，禁止 while True）、range、取模、增强赋值。',
+    '- 只能用 effect 内这些 ctx API（全部卡牌可用；playcard/set_global 只属于玩家回合脚本，卡牌不可用）：',
+    '  ctx.deal_damage("enemy" | "self", int) -> int',
     '  ctx.gain_block(int)',
     '  ctx.heal(int)',
     '  ctx.gain_energy(int)',
     '  ctx.lose_energy(int)',
-    '  ctx.draw(int)',
-    '  ctx.discard(int)',
+    '  ctx.draw(int) -> int',
+    '  ctx.discard(int) -> int',
     '  ctx.swap("draw" | "hand" | "discard", int, int)',
     '  ctx.move_card("draw" | "hand" | "discard", int, "draw" | "hand" | "discard", int)',
-    '  ctx.shuffle(), ctx.reshuffle()',
-    '  ctx.hand_size(), ctx.draw_size(), ctx.discard_size()',
-    '  ctx.getTurn(), ctx.getEnergy(), ctx.getBlock(), ctx.getMaxEnergy()',
-    '  ctx.random_int(int, int), ctx.log("...")',
+    '  ctx.shuffle(), ctx.reshuffle() -> int',
+    '  ctx.hand_size(), ctx.draw_size(), ctx.discard_size() -> int',
+    '  ctx.getHand(), ctx.getDraw(), ctx.getDiscard() -> 只读牌堆快照',
+    '  ctx.pile_costs("draw" | "hand" | "discard") -> int 数组',
+    '  ctx.getTurn(), ctx.getEnergy(), ctx.getBlock(), ctx.getMaxEnergy() -> int',
+    '  ctx.getHandLimit(), ctx.getDrawLimit() -> int',
+    '  ctx.get_global("name") -> str',
+    '  ctx.random_int(int, int) -> int',
+    '  ctx.log("...")',
     '- 费用决定效果上限：cost 0→1.5，1→2.4，2→3.2，3→4.2，4→5.5，5→6.4。超过上限会编译失败。',
+    '- P 是静态最坏值：API 调用按参数值计价，循环按最大迭代次数累计，条件分支按最坏分支累计；循环内调用越多次，P 越大。',
     '- 安全单效果参考（不会超上限）：',
     '  0 费：造成 3 伤害 / 4 格挡；1 费：造成 6 伤害 / 8 格挡 / 回复 5 / 抽 2；',
     '  2 费：造成 10 伤害 / 12 格挡 / 回复 8；3 费：造成 14 伤害 / 18 格挡；',
@@ -1582,9 +1633,9 @@ async function requestDeck(
       body: JSON.stringify({
         model,
         temperature: 0,
-        // Six cards plus the JSON envelope need a generous budget; reasoning
-        // models also spend tokens on hidden reasoning before emitting the deck.
-        max_tokens: isReasoningModel(model) ? 5000 : 2200,
+        // No max_tokens: reasoning models spend an unpredictable share of the
+        // budget on hidden reasoning. The prompt asks for the shortest JSON and
+        // the timeout bounds the wait instead.
         messages: [
           { role: 'system', content: '你是严格的 JSON 卡牌设计器，只输出 JSON，不要 Markdown 代码块。' },
           { role: 'user', content: prompt },
@@ -1713,8 +1764,9 @@ function now(): number {
 
 /**
  * Reasoning models may put their chain of thought in `reasoning_content` and
- * spend the whole max_tokens budget before writing the JSON answer. DeepSeek
- * Flash/V4 are reasoners by default even though their ids omit "reasoner".
+ * take much longer before writing the JSON answer, so plan and deck requests
+ * give them longer timeouts. DeepSeek Flash/V4 are reasoners by default even
+ * though their ids omit "reasoner".
  */
 function isReasoningModel(model?: string): boolean {
   return /reasoner|reasoning|deepseek-(flash|v4|r1)/i.test(model ?? '');
@@ -1722,9 +1774,8 @@ function isReasoningModel(model?: string): boolean {
 
 /**
  * DeepSeek exposes effort levels for Flash/V4. The lowest level keeps hidden
- * reasoning short enough for the JSON plan while still leaving budget for the
- * answer. Other hosts keep the plain request so they do not reject an unknown
- * field.
+ * reasoning short so the JSON answer arrives sooner. Other hosts keep the
+ * plain request so they do not reject an unknown field.
  */
 function reasoningEffortPatch(endpoint: string, model: string): { reasoning_effort?: 'low' } {
   if (!/(deepseek-(flash|v4))/i.test(model)) return {};
