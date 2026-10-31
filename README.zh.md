@@ -829,6 +829,7 @@ ctx.gain_energy(3)
 - DeepSeek 示例：地址 `https://api.deepseek.com`，型号 `deepseek-chat`，Key `sk-…`。地址含 deepseek 时，未修改过的默认型号会自动切到 `deepseek-chat`。
 - Key 只留在页面内存，不写入 localStorage 或后端。
 - 浏览器直连需要端点允许 CORS。
+- `deepseek-flash` / `deepseek-v4` 这类默认思考的型号会把隐藏推理和最终 JSON 共用 `max_tokens`。游戏会为它们提高动作计划与牌组的令牌预算、请求 `reasoning_effort: low` 并延长超时，避免回答还没开始就被推理截断。
 - 握手通过后，SENTINEL 会通过外接模型自行设计 5–10 张牌组。
 - 每张自建牌必须声明 cost/type/target，只开放 `effect(self, ctx)`，并带行尾 `//` 注释；注释会成为卡面与牌库里的卡牌说明。
 - 自建牌组至少要有 2 张 attack，总费用不得超限，并逐张通过和玩家相同的编译器。模型输出会先做本地归一化：`#` 注释转 `//`、去掉额外字段和文档字符串、补卡面说明，效果超上限时自动提高 cost；仍然非法的单张牌会被剔除，再按张数与总费用裁剪。整组仍无法满足约束时，会带着校验备注再请求一次修正；只有两次都失败，或请求超时/HTTP 失败，才退回固定牌组。

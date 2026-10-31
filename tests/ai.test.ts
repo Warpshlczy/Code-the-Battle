@@ -155,6 +155,19 @@ describe('plan parsing tolerance', () => {
     expect(plan.ops.map((o) => o.op)).toEqual(['play', 'end']);
   });
 
+  it('reserves a reasoning budget for DeepSeek Flash instead of starving the answer', async () => {
+    let body: { max_tokens?: number; reasoning_effort?: string } | undefined;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body));
+      return planResponse({ content: '{"ops":[{"op":"play"},{"op":"end"}]}' });
+    }));
+    const { plan, meta } = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-flash' }, 'aggressor');
+    expect(body?.max_tokens).toBe(2000);
+    expect(body?.reasoning_effort).toBe('low');
+    expect(plan.source).toBe('llm');
+    expect(meta.validation).toBe('格式通过');
+  });
+
   it('falls back to the local tactic when the text holds no plan', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => planResponse({ content: '我会先观察一下。' })));
     const { plan, meta } = await proposeAiPlan(view('aggressor'), 'llm', { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' }, 'aggressor');

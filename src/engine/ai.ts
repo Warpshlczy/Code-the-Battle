@@ -803,14 +803,18 @@ export async function proposeAiPlan(
     model: config.model,
     latencyMs: 0,
   };
+  const model = config.model || 'gpt-4o-mini';
+  // DeepSeek Flash/V4 think by default, and the reasoning tokens share the
+  // max_tokens budget. A 400-token plan cap ends with finish_reason=length and
+  // an empty content field, so those models need a much larger budget and a
+  // longer timeout even though their name does not say "reasoner".
+  const reasoningModel = isReasoningModel(model);
   const controller = new AbortController();
-  // Reasoners need longer per-turn budgets; the UI still has a timeout ceiling.
-  const timeoutMs = /reasoner/i.test(config.model ?? '')
-    ? Math.max(config.timeoutMs ?? 6000, 20000)
+  const timeoutMs = reasoningModel
+    ? Math.max(config.timeoutMs ?? 6000, 25000)
     : config.timeoutMs ?? 6000;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const model = config.model || 'gpt-4o-mini';
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -820,14 +824,15 @@ export async function proposeAiPlan(
       body: JSON.stringify({
         model,
         temperature: 0,
-        // Reasoner models spend tokens on hidden reasoning before the JSON answer,
+        // Reasoners spend tokens on hidden reasoning before the JSON answer,
         // so they need a larger output budget or the plan gets cut mid-object.
-        max_tokens: /reasoner/i.test(model) ? 900 : 400,
+        max_tokens: reasoningModel ? 2000 : 400,
         messages: [
           { role: 'system', content: '你是严格的 JSON 计划提议器，只输出 JSON，不要 Markdown 代码块。' },
           { role: 'user', content: prompt },
         ],
         ...(supportsJsonMode(endpoint, model) ? { response_format: { type: 'json_object' } } : {}),
+        ...reasoningEffortPatch(endpoint, model),
       }),
       signal: controller.signal,
     });
@@ -1460,14 +1465,15 @@ async function requestDeck(
       body: JSON.stringify({
         model,
         temperature: 0,
-        // Six cards plus the JSON envelope need a generous budget; reasoners
-        // also spend tokens on hidden reasoning before emitting the deck.
-        max_tokens: /reasoner/i.test(model) ? 3200 : 2200,
+        // Six cards plus the JSON envelope need a generous budget; reasoning
+        // models also spend tokens on hidden reasoning before emitting the deck.
+        max_tokens: isReasoningModel(model) ? 5000 : 2200,
         messages: [
           { role: 'system', content: '你是严格的 JSON 卡牌设计器，只输出 JSON，不要 Markdown 代码块。' },
           { role: 'user', content: prompt },
         ],
         ...(supportsJsonMode(endpoint, model) ? { response_format: { type: 'json_object' } } : {}),
+        ...reasoningEffortPatch(endpoint, model),
       }),
       signal: controller.signal,
     });
@@ -1527,7 +1533,9 @@ export async function designAiDeck(
   }
   const prompt = buildAiDeckPrompt(persona, lang);
   const promptHash = fnv(prompt);
-  const timeoutMs = Math.max(25000, Math.min((config.timeoutMs ?? 8000) * 3, 40000));
+  const timeoutMs = isReasoningModel(config.model)
+    ? 40000
+    : Math.max(25000, Math.min((config.timeoutMs ?? 8000) * 3, 40000));
   const rawOutputs: string[] = [];
   let tokens = 0;
   let lastNote = '';
@@ -1584,6 +1592,31 @@ export async function designAiDeck(
 
 function now(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
+
+/**
+ * Reasoning models may put their chain of thought in `reasoning_content` and
+ * spend the whole max_tokens budget before writing the JSON answer. DeepSeek
+ * Flash/V4 are reasoners by default even though their ids omit "reasoner".
+ */
+function isReasoningModel(model?: string): boolean {
+  return /reasoner|reasoning|deepseek-(flash|v4|r1)/i.test(model ?? '');
+}
+
+/**
+ * DeepSeek exposes effort levels for Flash/V4. The lowest level keeps hidden
+ * reasoning short enough for the JSON plan while still leaving budget for the
+ * answer. Other hosts keep the plain request so they do not reject an unknown
+ * field.
+ */
+function reasoningEffortPatch(endpoint: string, model: string): { reasoning_effort?: 'low' } {
+  if (!/(deepseek-(flash|v4))/i.test(model)) return {};
+  try {
+    const host = new URL(endpoint, 'https://invalid.local').hostname;
+    return /(^|\.)deepseek\.com$/i.test(host) ? { reasoning_effort: 'low' } : {};
+  } catch {
+    return {};
+  }
 }
 
 /**

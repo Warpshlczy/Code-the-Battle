@@ -829,6 +829,7 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - DeepSeek example: endpoint `https://api.deepseek.com`, model `deepseek-chat`, key `sk-…`. Choosing a DeepSeek endpoint also replaces the untouched default model with `deepseek-chat`.
 - The key stays in page memory; it is not written to localStorage or a backend.
 - Browser requests require the endpoint to allow CORS.
+- Models that think by default (such as `deepseek-flash` / `deepseek-v4`) share `max_tokens` between hidden reasoning and the final JSON. For those ids the game raises the plan/deck token budgets, asks for `reasoning_effort: low` and extends the timeout, so the answer is not truncated before it starts.
 - After the handshake, SENTINEL designs its own 5–10 card deck through the external model.
 - Every designed card must declare cost/type/target, expose only `effect(self, ctx)` and carry a trailing `//` comment. The comment becomes the card description on its face and in its deck.
 - A designed deck must contain at least two attacks, stay inside the total cost cap and compile through the same compiler as player cards. Model output is normalized first: `#` comments become `//`, extra fields and docstrings are removed, missing card text is filled in, and an over-budget effect raises the card's cost instead of rejecting it. Illegal cards are dropped, then the deck is trimmed to the card-count and total-cost caps. If the deck still fails, one corrective round is sent; only after both rounds fail, or on timeout/HTTP errors, does it fall back to the fixed deck.
