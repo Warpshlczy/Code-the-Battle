@@ -140,7 +140,7 @@ A few design choices:
 - **Code ledger.** Source, line, API, credits, damage, block, healing and pile operations.
 - **Pile replay.** Draw, discard, shuffle, register writes, halts and AI actions on a timeline.
 - **Code interrogation.** Multiple-choice questions generated from this battle's log, with evidence and explanations when you answer wrong.
-- **Opponent file.** Persona, proposal count, fallback count, sample actions and audit records.
+- **Opponent file.** Persona, deck source and validation note, proposal count, fallback count, sample actions and audit records.
 - **Replay check.** Rebuild public state from events and compare hashes and resources.
 - **JSON export.** Seed, outcome, turns, deck weight, AI audit and every event.
 
@@ -217,7 +217,7 @@ npm test          # vitest run
 npm run test:watch
 ```
 
-The suite covers rules, credits, AI, presentation, balance, replay and smoke flows. There are 8 test files and 58 tests.
+The suite covers rules, credits, AI, presentation, balance, replay and smoke flows. There are 8 test files and 67 tests.
 
 ### 5.5 Scripts
 
@@ -270,7 +270,7 @@ The review screen opens after the battle:
 - **Code ledger:** line, API, credits, damage.
 - **Pile replay:** hand, draw, discard, shuffle and register changes.
 - **Code interrogation:** questions about this battle's behavior.
-- **Opponent file:** persona, proposals and fallbacks.
+- **Opponent file:** persona, deck provenance and validation, proposals and fallbacks.
 - **Replay check:** state hash after replaying events.
 
 ### Language
@@ -829,15 +829,20 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - DeepSeek example: endpoint `https://api.deepseek.com`, model `deepseek-chat`, key `sk-…`. Choosing a DeepSeek endpoint also replaces the untouched default model with `deepseek-chat`.
 - The key stays in page memory; it is not written to localStorage or a backend.
 - Browser requests require the endpoint to allow CORS.
-- Any invalid, timed-out, over-budget or unparsable response falls back to the fixed tactics as a whole, with an audit entry.
-- The LLM only proposes actions. The rules engine validates and executes them.
+- After the handshake, SENTINEL designs its own 5–10 card deck through the external model.
+- Every designed card must declare cost/type/target, expose only `effect(self, ctx)` and carry a trailing `//` comment. The comment becomes the card description on its face and in its deck.
+- A designed deck must contain at least two attacks, stay inside the total cost cap and compile through the same compiler as player cards. Any illegal card, over-budget effect, missing comment, timeout or HTTP error rejects the whole deck and falls back to the fixed deck.
+- The model only proposes actions and deck source. The rules engine validates and executes them.
+- Deck provenance (fixed vs self-designed, model, prompt hash, tokens, validation note and raw output) is kept in the battle state and shown in the opponent file and exported log.
+- Any invalid, timed-out, over-budget or unparsable **action plan** falls back to the fixed tactics as a whole, with an audit entry. Fenced JSON, surrounding prose, operation aliases and `reasoning_content` are accepted, so a well-formed plan is not rejected over formatting.
 
 ### 12.4 Fairness
 
 - The opponent follows the same cost, Energy, pile and credit rules, with its own deck.
+- Its self-designed deck passes the same compiler, effect cap and comment check as yours.
 - It does not announce intent.
 - It cannot read your code, hand or draw order.
-- Its card names and descriptions never enter the prompt.
+- Its card names and descriptions never enter the action prompt.
 - Before the battle it reveals only its combat style, not its hand or plan.
 
 ---
@@ -886,6 +891,8 @@ Wrong answers show evidence and an explanation.
 ### 13.4 Opponent file
 
 - Persona and style;
+- deck source (fixed or self-designed) and deck validation note;
+- raw deck design output, when one was produced;
 - proposal count;
 - fallback count;
 - last prompt hash;
@@ -1139,7 +1146,7 @@ npm test
 npm run build
 ```
 
-There are 8 test files and 58 tests. The build output is in `dist/`.
+There are 8 test files and 67 tests. The build output is in `dist/`.
 
 ### 17.3 When changing rules
 

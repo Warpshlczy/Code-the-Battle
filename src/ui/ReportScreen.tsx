@@ -42,6 +42,7 @@ export default function ReportScreen({ report, battle, onAgain, onBoot }: Props)
       turns: report.turns,
       playerDeck: report.state.playerDeckBudget,
       aiAudit: report.state.aiMeta,
+      aiDeck: report.state.aiDeckMeta,
       events: battle.getEvents(0),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -250,12 +251,27 @@ export default function ReportScreen({ report, battle, onAgain, onBoot }: Props)
             </div>
             <ul className="fact-list">
               <li><span>{t('决策来源', 'Decision source')}</span><b>{modeText(report.aiAudit.mode, lang)}</b></li>
+              <li>
+                <span>{t('牌组来源', 'Deck source')}</span>
+                <b>
+                  {report.state.aiDeckMeta.source === 'llm'
+                    ? t('SENTINEL 自行设计', 'Designed by SENTINEL')
+                    : t('固定牌组', 'Fixed deck')}
+                </b>
+              </li>
+              <li><span>{t('牌组检查', 'Deck check')}</span><b>{translateMessage(report.state.aiDeckMeta.note ?? '', lang) || '—'}</b></li>
               <li><span>{t('外接提议', 'External proposals')}</span><b>{report.aiAudit.proposals}</b></li>
               <li><span>{t('整份退回', 'Full fallbacks')}</span><b>{report.aiAudit.fallbacks}</b></li>
               <li><span>{t('最近请求指纹', 'Latest prompt hash')}</span><b className="mono">{report.aiAudit.lastPromptHash ?? '—'}</b></li>
               <li><span>{t('最近检查', 'Latest validation')}</span><b>{translateMessage(report.aiAudit.lastValidation, lang) || '—'}</b></li>
               <li><span>{t('最近用量（tokens）', 'Latest tokens')}</span><b>{report.state.aiMeta.filter((m) => m.source === 'llm').slice(-1)[0]?.tokens ?? '—'}</b></li>
             </ul>
+            {report.state.aiDeckMeta.rawOutput && (
+              <details className="raw-output">
+                <summary>{t('牌组设计原始输出（截断）', 'Raw deck design output (truncated)')}</summary>
+                <pre>{report.state.aiDeckMeta.rawOutput}</pre>
+              </details>
+            )}
             {(() => {
               const llm = report.state.aiMeta.filter((m) => m.source === 'llm').slice(-1)[0];
               return llm?.rawOutput ? (
@@ -276,9 +292,11 @@ export default function ReportScreen({ report, battle, onAgain, onBoot }: Props)
               <ul className="fair-list">
                 <li>{t('只看公开场面和自己的手牌', 'Sees only the public board and its own hand')}</li>
                 <li>{t('不读你的代码、手牌和抽牌顺序', 'Cannot read your code, hand or draw order')}</li>
-                <li>{t('和你用同一套卡、能量、牌堆与预算', 'Uses the same cards, energy, piles and budget as you')}</li>
+                <li>{t('和你用同一套规则、编译器、能量与预算', 'Uses the same rules, compiler, energy and budget as you')}</li>
+                <li>{t('牌组由它自己设计，每张牌都要通过编译和注释校验', 'Its deck is self-designed; every card must pass compilation and comment checks')}</li>
                 <li>{t('外接战术只提出顺序，引擎逐条检查', 'External tactics only propose an order; the engine checks every item')}</li>
                 <li>{t('非法、超时或答非所问，就整份退回固定战术', 'Illegal, late or off-topic proposals are replaced by the fixed heuristic')}</li>
+                <li>{t('牌组非法或没写成，就整组退回固定牌组', 'An illegal or missing deck falls back to the fixed deck')}</li>
                 <li>{t('记下请求指纹、原始输出、检查结果和退回原因', 'Records prompt hashes, raw output, validation results and fallback reasons')}</li>
               </ul>
             </Panel>

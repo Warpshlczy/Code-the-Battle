@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { compileCard, validateDeck, validateRegisters, type CompiledCard } from './engine/analyze';
-import { deckWeight, personaForSeed, Battle } from './engine/battle';
+import { personaForSeed, Battle } from './engine/battle';
 import { buildReport, type BattleReport } from './engine/report';
 import {
   DEFAULT_ART,
@@ -10,7 +10,7 @@ import {
   starterCards,
   type DeckSlot,
 } from './content/deck';
-import type { AiConfig } from './engine/ai';
+import type { AiConfig, AiDeckMeta } from './engine/ai';
 import { useLang } from './i18n';
 import { BootScreen, RulesModal } from './ui/BootScreen';
 import BuildScreen from './ui/BuildScreen';
@@ -38,7 +38,6 @@ export default function App() {
   const previousLang = useRef(lang);
 
   const aiDeck = useMemo(() => compileAiDeck(lang), [lang]);
-  const aiBudget = useMemo(() => deckWeight(aiDeck), [aiDeck]);
   const persona = useMemo(() => personaForSeed(seed), [seed]);
 
   // Switching language converts untouched starter content only. Custom cards,
@@ -81,13 +80,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [screen]);
 
-  const startBattle = () => {
+  const startBattle = (designedDeck?: CompiledCard[], deckMeta?: AiDeckMeta) => {
     if (!canStart) return;
     const b = new Battle({
       seed,
       playerDeck: cards,
       registers: registers.map((r) => ({ ...r, enumValues: r.enumValues ? [...r.enumValues] : undefined })),
-      aiDeck,
+      aiDeck: designedDeck ?? aiDeck,
+      aiDeckMeta: deckMeta ?? { source: 'fixed' },
       aiMode,
       aiConfig: aiMode === 'llm' ? { ...aiConfig } : undefined,
     });
@@ -140,7 +140,6 @@ export default function App() {
           aiConfig={aiConfig}
           setAiConfig={setAiConfig}
           persona={persona}
-          aiBudget={aiBudget}
           aiDeck={aiDeck}
           onStart={startBattle}
           onReset={resetBuild}

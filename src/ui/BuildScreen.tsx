@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CardArt, CompileResult, CompiledCard, Diagnostic, RegisterDecl } from '../engine/analyze';
 import { CODE_LIMITS, LIMITS, effectCapForCost } from '../engine/config';
-import { probeAiConnection, normalizeEndpoint, type AiConfig, type AiPersona, type ProbeResult } from '../engine/ai';
+import { probeAiConnection, designAiDeck, normalizeEndpoint, type AiConfig, type AiDeckMeta, type AiPersona, type ProbeResult } from '../engine/ai';
 import type { DeckSlot } from '../content/deck';
 import { DEFAULT_ART, defaultRegisters, starterCards } from '../content/deck';
 import { useLang, useT, type Lang } from '../i18n';
@@ -27,9 +27,8 @@ interface Props {
   aiConfig: AiConfig;
   setAiConfig: (config: AiConfig) => void;
   persona: AiPersona;
-  aiBudget: number;
   aiDeck: CompiledCard[];
-  onStart: () => void;
+  onStart: (aiDeck?: CompiledCard[], deckMeta?: AiDeckMeta) => void;
   onReset: () => void;
   onRules: () => void;
   onBoot: () => void;
@@ -61,7 +60,7 @@ function errorCount(result: CompileResult<CompiledCard>): number {
 export default function BuildScreen(props: Props) {
   const {
     slots, setSlots, registers, setRegisters, cardCompiles, deckDiags, regDiags, canStart,
-    seed, setSeed, aiMode, setAiMode, aiConfig, setAiConfig, persona, aiBudget, aiDeck, onStart, onReset, onRules, onBoot,
+    seed, setSeed, aiMode, setAiMode, aiConfig, setAiConfig, persona, aiDeck, onStart, onReset, onRules, onBoot,
   } = props;
   const t = useT();
   const lang = useLang();
@@ -69,6 +68,9 @@ export default function BuildScreen(props: Props) {
   const [faceTab, setFaceTab] = useState<'paint' | 'style'>('paint');
   const [llmPhase, setLlmPhase] = useState<'idle' | 'checking' | 'ready' | 'error'>('idle');
   const [llmError, setLlmError] = useState('');
+  const [designedDeck, setDesignedDeck] = useState<CompiledCard[] | null>(null);
+  const [deckPhase, setDeckPhase] = useState<'idle' | 'designing' | 'ready' | 'fallback'>('idle');
+  const [deckNote, setDeckNote] = useState('');
   const probeToken = useRef(0);
   const editorRef = useRef<CodeEditorHandle>(null);
   const result = cardCompiles[selected];
@@ -79,9 +81,11 @@ export default function BuildScreen(props: Props) {
   const blocking = deckDiags.filter((d) => d.severity === 'error');
   const regBlocking = regDiags.filter((d) => d.severity === 'error');
   const art = slots[selected]?.art ?? DEFAULT_ART;
-  const llmBusy = aiMode === 'llm' && llmPhase === 'checking';
+  const llmBusy = aiMode === 'llm' && (llmPhase === 'checking' || deckPhase === 'designing');
   const resolvedEndpoint = normalizeEndpoint(aiConfig.endpoint);
   const endpointTyped = (aiConfig.endpoint ?? '').trim();
+  const displayDeck = designedDeck ?? aiDeck;
+  const aiBudget = displayDeck.reduce((sum, c) => sum + c.cost, 0);
 
   const describeProbe = (probe: ProbeResult): string => {
     const raw = probe.detail ? ` · ${probe.detail}` : '';
@@ -130,12 +134,16 @@ export default function BuildScreen(props: Props) {
     setAiConfig(patch);
   };
 
-  // Any endpoint/key/model change invalidates the previous handshake.
+  // Any endpoint/key/model/persona change invalidates the previous handshake
+  // and the deck SENTINEL already designed for the old setup.
   useEffect(() => {
     probeToken.current += 1;
     setLlmPhase('idle');
     setLlmError('');
-  }, [aiMode, aiConfig.endpoint, aiConfig.model, aiConfig.apiKey]);
+    setDesignedDeck(null);
+    setDeckPhase('idle');
+    setDeckNote('');
+  }, [aiMode, aiConfig.endpoint, aiConfig.model, aiConfig.apiKey, persona, lang]);
 
   const startBattle = async () => {
     if (!canStart || llmBusy) return;
@@ -146,6 +154,9 @@ export default function BuildScreen(props: Props) {
     const token = ++probeToken.current;
     setLlmPhase('checking');
     setLlmError('');
+    setDesignedDeck(null);
+    setDeckPhase('idle');
+    setDeckNote('');
     const result = await probeAiConnection(aiConfig);
     if (token !== probeToken.current) return;
     if (!result.ok) {
@@ -154,10 +165,24 @@ export default function BuildScreen(props: Props) {
       return;
     }
     setLlmPhase('ready');
-    // Let both readiness rows actually paint before the battle takes over.
+    setDeckPhase('designing');
+    // The model is online; now let it design its own deck. Every card still goes
+    // through the same compiler and comment check as the player's cards.
+    const design = await designAiDeck(aiConfig, persona, lang);
+    if (token !== probeToken.current) return;
+    if (design.ok) {
+      setDesignedDeck(design.cards);
+      setDeckPhase('ready');
+      setDeckNote(design.meta.note ?? '');
+    } else {
+      setDesignedDeck(null);
+      setDeckPhase('fallback');
+      setDeckNote(design.meta.note ?? '');
+    }
+    // Let the readiness rows actually paint before the battle takes over.
     await new Promise((resolve) => window.setTimeout(resolve, 260));
     if (token !== probeToken.current) return;
-    onStart();
+    onStart(design.ok ? design.cards : undefined, design.ok ? design.meta : { ...design.meta, source: 'fixed' });
   };
 
   const startLabel = llmBusy
@@ -167,7 +192,9 @@ export default function BuildScreen(props: Props) {
       : t('进入战场', 'ENTER BATTLE');
   const startMeta = aiMode === 'llm'
     ? llmBusy
-      ? t('玩家已就绪 · 正在等待外接模型响应', 'Player ready · waiting for the external model')
+      ? deckPhase === 'designing'
+        ? t('模型已在线 · SENTINEL 正在自行设计牌组', 'Model online · SENTINEL is designing its own deck')
+        : t('玩家已就绪 · 正在等待外接模型响应', 'Player ready · waiting for the external model')
       : llmPhase === 'error'
         ? t('模型未就绪 · 点击重新握手', 'Model not ready · click to handshake again')
         : t(`玩家${canStart ? '已就绪' : '未就绪'} · 开战前检查外接模型`, `Player ${canStart ? 'ready' : 'not ready'} · external model checked before battle`)
@@ -306,10 +333,10 @@ export default function BuildScreen(props: Props) {
                   <span>{t('玩家牌组', 'Player deck')}</span>
                   <b>{canStart ? t('已就绪', 'Ready') : t('未就绪', 'Not ready')}</b>
                 </div>
-                <div className={`ready-row ${llmPhase === 'ready' ? 'ok' : llmPhase === 'error' ? 'bad' : llmBusy ? 'wait' : ''}`}>
+                <div className={`ready-row ${llmPhase === 'ready' ? 'ok' : llmPhase === 'error' ? 'bad' : llmPhase === 'checking' ? 'wait' : ''}`}>
                   <span>{t('外接模型', 'External model')}</span>
                   <b>
-                    {llmBusy
+                    {llmPhase === 'checking'
                       ? t('握手中…', 'Handshaking…')
                       : llmPhase === 'ready'
                         ? t('已就绪', 'Ready')
@@ -318,8 +345,28 @@ export default function BuildScreen(props: Props) {
                           : t('待检测', 'Not checked')}
                   </b>
                 </div>
+                <div className={`ready-row ${deckPhase === 'ready' ? 'ok' : deckPhase === 'fallback' ? 'bad' : deckPhase === 'designing' ? 'wait' : ''}`} data-testid="ai-deck-status">
+                  <span>{t('SENTINEL 牌组', 'SENTINEL deck')}</span>
+                  <b>
+                    {deckPhase === 'designing'
+                      ? t('自行设计中…', 'Designing…')
+                      : deckPhase === 'ready'
+                        ? t(`自行设计 ${designedDeck?.length ?? 0} 张`, `Self-designed ${designedDeck?.length ?? 0}`)
+                        : deckPhase === 'fallback'
+                          ? t('回退固定牌组', 'Fixed deck fallback')
+                          : t('待设计', 'Not designed')}
+                  </b>
+                </div>
+                {deckNote && deckPhase !== 'idle' && deckPhase !== 'designing' && (
+                  <p className={deckPhase === 'fallback' ? 'ready-error' : 'hint'}>{deckNote}</p>
+                )}
                 {llmError && <p className="ready-error" role="alert">{llmError}</p>}
-                <p className="hint">{t('双方就绪后开战 · 握手仅发送 1 token', 'Battle starts when both sides are ready · the handshake sends only 1 token')}</p>
+                <p className="hint">
+                  {t(
+                    '双方就绪后开战 · 外接模型自行设计牌组，每张牌都要通过编译和注释校验',
+                    'Battle starts when both sides are ready · the model designs its deck, and every card must pass compilation and comment checks',
+                  )}
+                </p>
               </div>
             )}
             {!canStart && (
@@ -657,8 +704,8 @@ export default function BuildScreen(props: Props) {
                   </p>
                   <p className="hint warn">
                     {t(
-                      '外接战术只负责提出出牌顺序，规则引擎会逐条检查。连不上、答得慢或答错，就整份退回固定战术，并写进战后档案。',
-                      'The external model only proposes a play order; the rules engine validates every op. If it cannot connect, answers too slowly or answers wrongly, the whole plan falls back to the fixed tactic and is recorded in the post-battle file.',
+                      '外接模型负责设计牌组并提出出牌顺序，但每张牌都要通过和玩家相同的编译器、注释校验与费用上限；任一张非法或连不上，就整组退回固定牌组，并写进战后档案。',
+                      'The external model designs its deck and proposes play orders, but every card must pass the same compiler, comment check and cost cap as yours. If any card is illegal or the call fails, the whole deck falls back to the fixed one and is recorded in the post-battle file.',
                     )}
                   </p>
                 </div>
@@ -676,11 +723,14 @@ export default function BuildScreen(props: Props) {
 
           <details className="enemy-deck-panel" data-testid="enemy-deck" open>
             <summary>
-              {t(`敌方牌库 · ${aiDeck.length} 张`, `SENTINEL deck · ${aiDeck.length} cards`)}
+              {t(
+                `敌方牌库 · ${displayDeck.length} 张${aiMode === 'llm' && designedDeck ? ' · 自行设计' : ''}`,
+                `SENTINEL deck · ${displayDeck.length} cards${aiMode === 'llm' && designedDeck ? ' · self-designed' : ''}`,
+              )}
               <span>{t('展开', 'expand')}</span>
             </summary>
             <div className="enemy-deck-grid">
-              {aiDeck.map((c, i) => (
+              {displayDeck.map((c, i) => (
                 <CardFace key={`${c.name}-${i}`} name={c.name} cost={c.cost} type={c.type} description={c.description} size="mini" />
               ))}
             </div>

@@ -1,7 +1,6 @@
 import { compileCard, compileScript, type RegisterDecl } from './analyze';
 import { Battle, type LogEvent, type PublicBattleState } from './battle';
 import type { AiOp } from './ai';
-import { compileAiDeck } from '../content/deck';
 
 export interface AttributionRow {
   key: string;
@@ -409,7 +408,7 @@ export async function verifyReplay(original: Battle): Promise<ReplayResult> {
     seed: data.seed,
     playerDeck: deck.map((d) => d.value!),
     registers: data.registers as RegisterDecl[],
-    aiDeck: compileAiDeck(),
+    aiDeck: data.aiDeck,
     aiMode: original.aiMode,
     recordedAiPlans: data.plans as AiOp[][],
     autoStart: true,

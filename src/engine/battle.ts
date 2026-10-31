@@ -13,7 +13,7 @@ import {
 } from './config';
 import type { CompiledCard, CompiledScript, RegisterDecl } from './analyze';
 import { Interpreter, SandboxHalt, SbList, TurnBudget, type Prim, type RV, type SandboxHost, type SbObj, type SourceRef } from './sandbox';
-import { proposeAiPlan, heuristicPlan, type AiConfig, type AiMeta, type AiOp, type AiPersona, type AiPlan, type AiView } from './ai';
+import { proposeAiPlan, heuristicPlan, type AiConfig, type AiDeckMeta, type AiMeta, type AiOp, type AiPersona, type AiPlan, type AiView } from './ai';
 import { Rng } from './rng';
 
 export type Side = 'player' | 'enemy';
@@ -137,6 +137,7 @@ export interface PublicBattleState {
   aiDeckBudget: number;
   playerDeck: PublicCard[];
   aiDeck: PublicCard[];
+  aiDeckMeta: AiDeckMeta;
   enemyDiscard: PublicCard[];
   lastHalt: TurnRecord['halted'] | null;
   turnRecords: TurnRecord[];
@@ -149,6 +150,7 @@ export interface BattleOptions {
   playerDeck: CompiledCard[];
   registers: RegisterDecl[];
   aiDeck: CompiledCard[];
+  aiDeckMeta?: AiDeckMeta;
   aiMode: 'heuristic' | 'llm' | 'recorded';
   aiConfig?: AiConfig;
   recordedAiPlans?: AiOp[][];
@@ -194,6 +196,7 @@ export class Battle {
   readonly registers: RegisterDecl[];
   readonly playerDeck: CompiledCard[];
   readonly aiDeck: CompiledCard[];
+  readonly aiDeckMeta: AiDeckMeta;
   readonly aiConfig?: AiConfig;
   readonly recordedAiPlans?: AiOp[][];
 
@@ -224,6 +227,7 @@ export class Battle {
     this.registers = opts.registers;
     this.playerDeck = opts.playerDeck;
     this.aiDeck = opts.aiDeck;
+    this.aiDeckMeta = opts.aiDeckMeta ?? { source: 'fixed' };
     this.aiMode = opts.aiMode;
     this.aiConfig = opts.aiConfig;
     this.recordedAiPlans = opts.recordedAiPlans;
@@ -1183,6 +1187,7 @@ export class Battle {
         uid: `ad${i}`, name: c.name, description: c.description, cost: c.cost,
         type: c.type, target: c.target, art: c.art, playable: false,
       })),
+      aiDeckMeta: this.aiDeckMeta,
       enemyDiscard: this.enemy.piles.discard.map((c) => ({
         uid: c.uid, name: c.name, description: c.description, cost: c.cost,
         type: c.type, target: c.target, art: c.art, playable: false,
@@ -1198,11 +1203,12 @@ export class Battle {
     return this.log.slice(from);
   }
 
-  replayData(): { seed: number; registers: RegisterDecl[]; playerDeckSources: string[]; aiMode: string; plans: AiOp[][] } {
+  replayData(): { seed: number; registers: RegisterDecl[]; playerDeckSources: string[]; aiDeck: CompiledCard[]; aiMode: string; plans: AiOp[][] } {
     return {
       seed: this.seed,
       registers: this.registers,
       playerDeckSources: this.playerDeck.map((c) => c.source),
+      aiDeck: this.aiDeck,
       aiMode: this.aiMode,
       plans: this.executedAiPlans,
     };
