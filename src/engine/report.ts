@@ -368,7 +368,7 @@ function buildQuestions(
       answer,
       evidence: `决策来源：${battle.getState().aiMode === 'llm' ? '外部模型' : battle.getState().aiMode === 'recorded' ? '录制回放' : '本地策略'}；提议 ${ai.filter((m) => m.source === 'llm').length} 次，退回 ${ai.filter((m) => m.fallbackReason).length} 次。`,
       explanation:
-        '外部模型只看得到公开场面和自己的手牌，它交上来的只是一套顺序。引擎会逐条检查目标、能量、预算和牌堆；非法、超时或答非所问，就整份退回本地策略，你的代码它看不到。',
+        '外部模型能看到公开场面、双方完整牌组设计、寄存器当前值和自己的手牌/牌堆，它交上来的只是一套顺序。引擎会逐条检查目标、能量、预算和牌堆；非法、超时或答非所问，就整份退回本地策略。它看不到你当前的手牌、抽牌顺序和未执行的脚本。',
       tag: 'ai',
     });
   }

@@ -622,16 +622,26 @@ export class Battle {
   private buildAiView(): AiView {
     const own = this.enemy;
     const foe = this.player;
-    const cardView = (c: CardInstance, slot: number, withSource: boolean) => ({
+    // Battle-time instances carry only the face name and energy cost. Effects
+    // are public through the deck designs, which both sides know from turn 1.
+    const cardView = (c: CardInstance, slot: number) => ({
+      slot,
+      name: c.name,
+      cost: c.cost,
+      // Internal tag set for the deterministic fallback policy. The prompt
+      // serializes instances with name/cost only; effects live in the deck.
+      api: [...new Set(c.compiled?.apiUses.map((u) => u.name) ?? [])],
+    });
+    const deckView = (deck: CompiledCard[]) => deck.map((c, slot) => ({
       slot,
       name: c.name,
       cost: c.cost,
       type: c.type,
       target: c.target,
       description: c.description,
-      ...(withSource ? { source: c.compiled?.source ?? '' } : {}),
-      api: [...new Set(c.compiled?.apiUses.map((u) => u.name) ?? [])],
-    });
+      api: [...new Set(c.apiUses.map((u) => u.name))],
+      source: c.source,
+    }));
     return {
       turn: this.turn,
       self: {
@@ -640,13 +650,14 @@ export class Battle {
         block: own.block,
         energy: own.energy,
         energyMax: ENERGY_PER_TURN,
-        hand: own.piles.hand.map((c, i) => cardView(c, i, true)),
-        drawPile: own.piles.draw.map((c, i) => cardView(c, i, false)),
-        discardPile: own.piles.discard.map((c, i) => cardView(c, i, false)),
+        hand: own.piles.hand.map(cardView),
+        drawPile: own.piles.draw.map(cardView),
+        discardPile: own.piles.discard.map(cardView),
         drawCount: own.piles.draw.length,
         discardCount: own.piles.discard.length,
         handLimit: LIMITS.deck.handCap,
         drawLimit: LIMITS.deck.drawCap,
+        deck: deckView(this.aiDeck),
       },
       opponent: {
         hp: foe.hp,
@@ -659,7 +670,17 @@ export class Battle {
         discardCount: foe.piles.discard.length,
         handLimit: LIMITS.deck.handCap,
         drawLimit: LIMITS.deck.drawCap,
+        deck: deckView(this.playerDeck),
       },
+      registers: this.registers.map((r) => ({
+        name: r.name,
+        type: r.type,
+        value: this.registerValues.get(r.name) ?? r.initial,
+        min: r.min,
+        max: r.max,
+        enumValues: r.enumValues,
+        owner: 'player' as const,
+      })),
       persona: this.persona,
       legalOps: ['play（打出最左牌）', 'discard（弃置最左牌）', 'end'],
       history: buildAiViewHistory(this.log, this.turn, MAX_TURNS, this.executedAiPlans),
@@ -763,9 +784,11 @@ export class Battle {
       if (name === 'discard') return u.piles.discard;
       throw new SandboxHalt('PROTOCOL_HALT', '协议中断', r, `非法牌堆 ${name}`);
     };
+    // Battle-time card instances expose only their name and energy cost.
+    // Full effects are public through the deck design, not through the instance.
     const cardSnapshot = (c: CardInstance): SbObj => ({
       shape: 'card',
-      fields: Object.freeze({ name: c.name, cost: c.cost, type: c.type, target: c.target }),
+      fields: Object.freeze({ name: c.name, cost: c.cost }),
     });
     const cardList = (cards: CardInstance[]): SbList => new SbList(cards.map(cardSnapshot));
     const chargeCredits = (name: string, args: Prim[], r: SourceRef): number => {
@@ -782,6 +805,7 @@ export class Battle {
           case 'getHand': magnitude = self.piles.hand.length; break;
           case 'getDraw': magnitude = self.piles.draw.length; break;
           case 'getDiscard': magnitude = self.piles.discard.length; break;
+          case 'getPile': magnitude = pileOf(self, String(args[0] ?? 'hand'), r).length; break;
           case 'pile_costs': magnitude = pileOf(self, String(args[0] ?? 'hand'), r).length; break;
           case 'getTurn': magnitude = owner.turn; break;
           case 'getEnergy': magnitude = self.energy; break;
@@ -958,6 +982,8 @@ export class Battle {
             return cardList(self.piles.draw);
           case 'getDiscard':
             return cardList(self.piles.discard);
+          case 'getPile':
+            return cardList(pileOf(self, str(args, 0, r, name), r));
           case 'hand_size':
             return self.piles.hand.length;
           case 'draw_size':

@@ -168,7 +168,7 @@ export default function BuildScreen(props: Props) {
     setDeckPhase('designing');
     // The model is online; now let it design its own deck. Every card still goes
     // through the same compiler and comment check as the player's cards.
-    const design = await designAiDeck(aiConfig, persona, lang);
+    const design = await designAiDeck(aiConfig, persona, lang, registers);
     if (token !== probeToken.current) return;
     if (design.ok) {
       setDesignedDeck(design.cards);

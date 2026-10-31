@@ -168,6 +168,33 @@ describe('compiler rules', () => {
     expect(tooLong.ok).toBe(false);
   });
 
+  it('exposes only name and cost on battle card-object snapshots', () => {
+    const name = compileProbe('        cards = ctx.getPile("hand")\n        ctx.log(cards[0].name)', { cost: 2 });
+    expect(name).toBeTruthy();
+    const cost = compileProbe('        cards = ctx.getPile("hand")\n        ctx.log(str(cards[0].cost))', { cost: 2 });
+    expect(cost).toBeTruthy();
+    for (const field of ['type', 'target', 'description', 'source']) {
+      const res = compileCard(cardSource({ body: `        cards = ctx.getPile("hand")\n        ctx.log(cards[0].${field})`, cost: 3 }), REGS);
+      expect(res.ok).toBe(false);
+      expect(res.diagnostics.some((d) => d.code === 'E_ATTR')).toBe(true);
+    }
+    const badPile = compileCard(cardSource({ body: '        ctx.getPile("deck")', cost: 2 }), REGS);
+    expect(badPile.ok).toBe(false);
+  });
+
+  it('returns card objects from getPile at runtime', async () => {
+    const probe = compileProbe('        cards = ctx.getPile("hand")\n        ctx.log(cards[0].name)', { cost: 2 });
+    const helper = compileProbe('        ctx.gain_block(4)', { cost: 1 });
+    expect(probe).toBeTruthy();
+    expect(helper).toBeTruthy();
+    const battle = battleWith([probe!, helper!]);
+    const script = compileScript('ctx.playcard()', REGS);
+    expect(script.ok).toBe(true);
+    await battle.executePlayerScript(script.value!);
+    const entry = battle.log.find((e) => e.type === 'player_log');
+    expect(entry?.message).toContain(helper!.name);
+  });
+
   it('caps the deck at ten cards and drops the old budget and same-name rules', () => {
     const deck = compileSources(STARTER_CARDS, REGS);
     expect(validateDeck(deck.cards)).toHaveLength(0);

@@ -249,8 +249,8 @@ ctx.log("open")`}</pre>
               <h3><RuleIcon kind="deck" /> {t('对手的底线', 'THE OPPONENT’S LIMITS')}</h3>
               <p>
                 {t(
-                  'SENTINEL 和你用同一套卡、牌堆、能量和算力。它只看公开场面和自己的手牌，不读你的代码，也不看你的手牌，更不会预告意图。',
-                  'SENTINEL uses the same cards, piles, Energy and credits as you. It sees only the public board and its own hand. It cannot read your code or hand, and it never telegraphs its intent.',
+                  'SENTINEL 和你用同一套卡、牌堆、能量和算力。开战后双方完整牌组设计与寄存器状态对它公开；它看不到你的当前手牌、抽牌顺序和未执行的脚本，也不会预告意图。',
+                  'SENTINEL uses the same cards, piles, Energy and credits as you. Once the battle starts, both deck designs and the register state are public to it; it cannot see your current hand, draw order or unexecuted scripts, and it never telegraphs its intent.',
                 )}
               </p>
               <p>

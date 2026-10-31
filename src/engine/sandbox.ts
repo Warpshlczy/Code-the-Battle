@@ -344,7 +344,8 @@ export class Interpreter {
       throw new SandboxHalt('PROTOCOL_HALT', '协议中断', ref, `无法读取属性 ${name}`);
     }
     const allowed: Record<string, string[]> = {
-      card: ['name', 'cost', 'type', 'target'],
+      // Battle-time card instances expose only the face name and energy cost.
+      card: ['name', 'cost'],
       unit: [],
       turn: ['discarded_count', 'played_count'],
     };

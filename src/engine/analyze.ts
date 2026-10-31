@@ -268,14 +268,15 @@ const CARD_READ_EFFECT_COST: Record<string, number> = {
   getMaxEnergy: 2.2,
   getHandLimit: 2.0,
   getDrawLimit: 2.0,
-  hand_size: 1.1,
-  draw_size: 1.1,
-  discard_size: 1.1,
-  getHand: 1.4,
-  getDraw: 1.4,
-  getDiscard: 1.4,
+  hand_size: 0.7,
+  draw_size: 0.7,
+  discard_size: 0.7,
+  getHand: 0.8,
+  getDraw: 0.8,
+  getDiscard: 0.8,
+  getPile: 0.8,
   get_global: 1.6,
-  pile_costs: 0.4,
+  pile_costs: 0.25,
   'enemy.hp': 6.0,
   'enemy.block': 2.4,
 };
@@ -1073,10 +1074,11 @@ class Analyzer {
       return NONE;
     }
     if (shape === 'card') {
+      // Battle-time card instances expose only their name and energy cost.
+      // Full type/target/description/source belong to the known deck design.
       if (name === 'name') return { t: 'str', vals: null };
-      if (name === 'cost') return IV(0, 4);
-      if (name === 'type' || name === 'target') return { t: 'str', vals: null };
-      this.error(line, `卡牌快照没有字段 ${name}`, 'E_ATTR');
+      if (name === 'cost') return IV(0, 5);
+      this.error(line, `卡牌实例只开放 name 与 cost，没有字段 ${name}`, 'E_ATTR');
       return NONE;
     }
     this.error(line, `未知快照字段 ${name}`, 'E_ATTR');
@@ -1361,7 +1363,7 @@ class Analyzer {
       }
       magnitude = iv.max;
     }
-    if (name === 'pile_costs' || name === 'swap' || name === 'move_card') {
+    if (name === 'pile_costs' || name === 'getPile' || name === 'swap' || name === 'move_card') {
       if (!this.literal(vals[0], ['draw', 'hand', 'discard'], line, '牌堆')) return NONE;
     }
     if (name === 'move_card' && !this.literal(vals[2], ['draw', 'hand', 'discard'], line, '牌堆')) return NONE;
@@ -1438,7 +1440,7 @@ class Analyzer {
     if (api.cat === 'read') {
       const maxRead: Record<string, number> = {
         hand_size: 10, draw_size: 10, discard_size: 10,
-        getHand: 10, getDraw: 10, getDiscard: 10, pile_costs: 10,
+        getHand: 10, getDraw: 10, getDiscard: 10, getPile: 10, pile_costs: 10,
         getTurn: 30, getEnergy: 5, getBlock: 120,
         getMaxEnergy: 5, getHandLimit: 10, getDrawLimit: 10,
       };
@@ -1495,7 +1497,7 @@ class Analyzer {
     if (name === 'heal') this.cardWide.healMax = Math.max(this.cardWide.healMax, magnitude * Math.max(1, ctx.frequency));
     if (name === 'draw') this.cardWide.drawMax = Math.max(this.cardWide.drawMax, magnitude * Math.max(1, ctx.frequency));
 
-    if (name === 'getHand' || name === 'getDraw' || name === 'getDiscard') {
+    if (name === 'getHand' || name === 'getDraw' || name === 'getDiscard' || name === 'getPile') {
       const maxLen = name === 'getHand' ? LIMITS.deck.handCap : LIMITS.deck.hardMax;
       return { t: 'list', minLen: 0, maxLen, elem: OBJ('card'), cards: true };
     }

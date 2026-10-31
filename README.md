@@ -58,7 +58,7 @@
 
 During deck building you write **5–10 cards**. During the duel you write a **short tactical script every turn**. The rules engine statically analyzes your code, runs it in a sandbox, resolves combat, and records every event. After the battle, the review screen shows which line did what.
 
-Across the table sits an AI-driven humanoid dominator. It follows the same cost caps, Energy, pile and credit rules, with its own deck. It cannot see your code, your hand, or your draw order, and it does not announce its next move.
+Across the table sits an AI-driven humanoid dominator. It follows the same cost caps, Energy, pile and credit rules, with its own deck (self-designed when external tactics are enabled). Once the battle starts, both complete deck designs (including every card's effect and source), the register declarations and their live values are public to it. It still cannot see your current hand contents, draw order or unexecuted intent, and it does not announce its next move.
 
 The AI is only the opponent. The cards and the tactics are written by you.
 
@@ -89,13 +89,13 @@ A few design choices:
 | Tactics come from speed and luck | Tactics come from hand order, resources and scripts |
 | Designers balance the numbers | Cost caps and effect budgets decide card strength |
 | Losing shows a result screen | Losing shows line-by-line attribution |
-| AI plays your cards or builds your deck | AI is only the opponent; it cannot read your code |
+| AI plays your cards or builds your deck | AI is only the opponent; it cannot read the code you are editing, but both deck designs become public once the battle starts |
 | Review is a chart | Review is a code interrogation with evidence |
 
 ### 2.2 Hard rules
 
 1. **The code really runs.** Your `deal_damage` goes through IR, abstract interpretation, the sandbox and the battle engine, then lands in the event log. Animations are presentation; the result is not pre-scripted.
-2. **The AI cannot see your hidden state.** It gets the public board, its own full hand, its own draw and discard piles and the public action log. Your hidden hand, draw order, card source and code never enter the prompt.
+2. **The AI cannot see your hidden state, but it does see both deck designs.** Once the battle starts, the opponent receives the public board, both complete deck designs (every card's effect, source and API list), register declarations and live values, its own full hand and piles, and the public action log. Your current hand contents, draw order, future intent and unrevealed internal state never enter the prompt.
 3. **The review can trace every line.** Each API call records its source, line number, credits, damage, block, healing and pile operations. After the battle you can see which line caused what.
 
 ### 2.3 Who it is for
@@ -121,13 +121,13 @@ A few design choices:
 - **Card painter.** A 512×360 canvas with brush size, palette, custom colors, eraser, undo, redo and clear.
 - **Card preview.** Art appears in the DOM card face, tooltip, discard preview and 3D hand.
 - **Deck validation.** 5–10 cards; total cost, per-card caps and diagnostics.
-- **Optional external tactics.** Point at a `chat/completions` endpoint with a model and key. The key stays in page memory.
+- **Optional external tactics.** Point at a `chat/completions` endpoint with a model and key. The key stays in page memory. The external model designs its own deck under the same APIs, registers and resource limits, with winning as the top priority.
 
 ### 3.2 Battle phase
 
 - **Bottom terminal.** Write a script, confirm the command, return to the table, execute it. You can run several chunks in one turn.
 - **Leftmost play.** `ctx.playcard()` always plays the leftmost card. Hand order is the tactic.
-- **Hand scheduling.** `swap` and `move_card` reorder the hand; `pile_costs` reads costs.
+- **Hand scheduling.** `swap` and `move_card` reorder the hand cheaply; `pile_costs` or `getPile` reads the piles.
 - **Energy interrupt.** If Energy runs out, the command stops and a dialog shows which card needed what.
 - **Three.js table.** Both sides show draw pile, hand and discard, with trays, glowing edges and counts.
 - **Play animation.** Cards fly to the display zone, flip, highlight, then drop into discard. The remaining hand slides into place.
@@ -217,7 +217,7 @@ npm test          # vitest run
 npm run test:watch
 ```
 
-The suite covers rules, credits, AI, presentation, balance, replay and smoke flows. There are 8 test files and 67 tests.
+The suite covers rules, credits, AI, presentation, balance, replay and smoke flows. There are 8 test files and 83 tests.
 
 ### 5.5 Scripts
 
@@ -320,7 +320,7 @@ The review screen opens after the battle:
    - All remaining hand cards go to the discard pile (logged, with a fly-to-discard animation).
 6. **Opponent turn**
    - The opponent uses the same Energy, pile and credit rules.
-   - It sees only the public board and its own hand. It also discards its whole hand at the end.
+   - It sees both deck designs and the register state, but not your current hand contents, draw order or unexecuted scripts. It also discards its whole hand at the end.
 7. **Ending**
    - If either side reaches 0 HP, the battle ends immediately.
    - After 30 turns, the remaining HP ratio decides.
@@ -652,8 +652,8 @@ ctx.set_global("combo", min(ctx.get_global("combo") + 1, 20))
 | Signature | Scope | Returns | Base credits | Notes |
 | --- | --- | --- | --- | --- |
 | `ctx.playcard()` | script | bool | 0.8 | Plays the leftmost card; spends Energy only, does not read hand contents |
-| `ctx.swap(pile, i, j)` | both | none | 0.3 | Swaps two cards in one pile |
-| `ctx.move_card(from, fi, to, ti)` | both | none | 0.5 | Moves a card from any pile to a position in another pile |
+| `ctx.swap(pile, i, j)` | both | none | 0.1 | Swaps two cards in one pile (cheap scheduling) |
+| `ctx.move_card(from, fi, to, ti)` | both | none | 0.25 | Moves a card from any pile to a position in another pile (cheap scheduling) |
 
 Example:
 
@@ -669,19 +669,21 @@ ctx.playcard()
 | --- | --- | --- | --- | --- |
 | `ctx.draw(n)` | both | int | `1.5 + 0.9n + 0.04n²` | Draw n; if the draw pile is empty, shuffle discard back |
 | `ctx.discard(n)` | both | int | `1.2 + 0.7n` | Discard the leftmost n hand cards; negative effect |
-| `ctx.shuffle()` | both | none | `2.5` | Shuffle the draw pile with this battle's seed |
-| `ctx.reshuffle()` | both | int | `3` | Shuffle discard back into draw, stopping when full |
-| `ctx.pile_costs(pile)` | both | intlist | `0.3 + 0.08n` | Read every card cost in a pile |
-| `ctx.hand_size()` | both | int | `0.1 + 0.06n` | Read hand size |
-| `ctx.draw_size()` | both | int | `0.1 + 0.06n` | Read draw pile size |
-| `ctx.discard_size()` | both | int | `0.1 + 0.06n` | Read discard pile size |
-| `ctx.getHand()` | both | cardlist | `0.4 + 0.12n` | Read-only hand snapshot |
-| `ctx.getDraw()` | both | cardlist | `0.4 + 0.12n` | Read-only draw pile snapshot |
-| `ctx.getDiscard()` | both | cardlist | `0.4 + 0.12n` | Read-only discard snapshot |
+| `ctx.shuffle()` | both | none | `1.2` | Shuffle the draw pile with this battle's seed |
+| `ctx.reshuffle()` | both | int | `1.5` | Shuffle discard back into draw, stopping when full |
+| `ctx.pile_costs(pile)` | both | intlist | `0.15 + 0.04n` | Read every card cost in a pile |
+| `ctx.hand_size()` | both | int | `0.05 + 0.03n` | Read hand size |
+| `ctx.draw_size()` | both | int | `0.05 + 0.03n` | Read draw pile size |
+| `ctx.discard_size()` | both | int | `0.05 + 0.03n` | Read discard pile size |
+| `ctx.getHand()` | both | cardlist | `0.2 + 0.06n` | Read-only hand snapshot |
+| `ctx.getDraw()` | both | cardlist | `0.2 + 0.06n` | Read-only draw pile snapshot |
+| `ctx.getDiscard()` | both | cardlist | `0.2 + 0.06n` | Read-only discard snapshot |
+| `ctx.getPile(pile)` | both | cardlist | `0.2 + 0.06n` | Read-only snapshot of any pile; returns an array of card objects |
 
 Notes:
 
-- `getHand / getDraw / getDiscard` snapshots include name, cost, type and target.
+- `getHand / getDraw / getDiscard / getPile` return **arrays of card objects**; each element carries only `name` and `cost`. Full effects live in the public deck design.
+- `getPile("draw" | "hand" | "discard")` is equivalent to the three dedicated readers but lets you choose the pile with a variable.
 - You cannot access `ctx.hand`, `ctx.draw_pile` or `ctx.discard_pile` internal arrays.
 - `discard` is a negative effect and can discount part of the net effect.
 
@@ -729,11 +731,11 @@ Notes:
 | `ctx.turn.played_count` | both | int | Cards played this turn |
 | `ctx.turn.discarded_count` | both | int | Cards discarded this turn |
 | `card.name` | both | str | Snapshot card name |
-| `card.cost` | both | int | Snapshot card cost |
-| `card.type` | both | str | `attack` / `skill` |
-| `card.target` | both | str | `enemy` / `self` / `none` |
+| `card.cost` | both | int | Snapshot card energy cost |
 
-`ctx.turn` fields use fixed read pricing; `card.*` exists only on elements returned by `getHand / getDraw / getDiscard`.
+`ctx.turn` fields use fixed read pricing; `card.*` exists only on elements returned by `getHand / getDraw / getDiscard / getPile`.
+
+Battle-time card instances deliberately expose only `name` and `cost`. Reading `type`, `target`, `description` or `source` fails compilation with `E_ATTR`. Full card effects come from the public deck design, not from reverse-engineering pile snapshots.
 
 ### 10.7 Discouraged patterns
 
@@ -810,18 +812,20 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 **Allowed:**
 
 - public board: both HP, Block, Energy, pile and discard counts, turn number and limits;
-- its own full hand: names, descriptions, card source and API tags;
-- its own draw pile and discard pile contents (names, costs, types, targets, descriptions and API tags), with the draw pile in draw order;
+- **both complete deck designs**: every card's name, cost, type, target, description, effect source and API list. This is public from the first turn, without waiting for a card to be played;
+- **registers**: the names, types, ranges/enums and initial values you declared during deck building, plus their live values for this battle (marked as player-maintained);
+- its own hand, draw pile and discard pile contents (instances carry only name and cost; full effects come from the public deck design); its own draw pile is in actual draw order;
 - its own Energy and per-turn Energy maximum, plus hand/draw limits;
 - the recent public action log, including played cards and their results;
-- its previous plans.
+- its previous plans;
+- battle-time card-instance snapshots: only `name` and `cost`.
 
 **Not allowed:**
 
-- your hand contents or unrevealed cards;
-- your card descriptions or source;
-- your draw order;
-- your code, hidden resources or future intent.
+- your current hand contents or any unrevealed cards;
+- your draw order or the actual arrangement of your piles;
+- your unexecuted turn scripts, hidden resources or future intent;
+- `type` / `target` / `description` / `source` on any battle-time card instance (instances expose only `name` and `cost`; full effects live in the public deck design).
 
 ### 12.3 External LLM (optional)
 
@@ -831,7 +835,9 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 - The key stays in page memory; it is not written to localStorage or a backend.
 - Browser requests require the endpoint to allow CORS.
 - Plan and deck requests omit `max_tokens`, so a thinking model cannot spend the whole output budget before writing its answer. The prompt instead demands the shortest valid JSON; for `deepseek-flash` / `deepseek-v4` the game also asks for `reasoning_effort: low` and extends the timeout.
-- Both the deck-design and battle prompts list every card-callable API, the resource ledger (Energy per turn, costs, draw/reshuffle, hand and pile limits), the turn number, both sides' HP and Block, and the public battle log. They also tell the model it may use basic arithmetic, comparisons, sorting, conditionals and loops to plan a resource-maximizing sequence.
+- The deck-design prompt lists every callable API, register declarations and read/write rules, the full code limits (20 lines, complexity 80, 10 variables, 8-element lists, nesting depth 4, loop depth 2, 96 total iterations, 20 API calls, 200 characters per line) and the resource ledger (cost caps, 5 Energy per turn, 14 credits per turn, draw/reshuffle, hand and draw limits). It requires the model to build the strongest 5–10 card deck with winning as the single highest goal.
+- The battle prompt lists both complete deck designs (including every card's effect source), register declarations and live values, its own hand and piles, the public action log, the turn number and the per-turn resource ledger. It also states that every strategy must aim to win and that persona style is only a tendency.
+- Request timeouts widen as the battle goes on: action plans start at 20 seconds (45 for reasoning models), gain 3 seconds per turn, and cap at 120 seconds; deck-design requests also cap at 120 seconds; the handshake keeps a short 12-second timeout.
 - After the handshake, SENTINEL designs its own 5–10 card deck through the external model.
 - Every designed card must declare cost/type/target, expose only `effect(self, ctx)` and carry a trailing `//` comment. The comment becomes the card description on its face and in its deck.
 - A designed deck must contain at least two attacks, stay inside the total cost cap and compile through the same compiler as player cards. Model output is normalized first: `#` comments become `//`, extra fields and docstrings are removed, missing card text is filled in, and an over-budget effect raises the card's cost instead of rejecting it. Illegal cards are dropped, then the deck is trimmed to the card-count and total-cost caps. If the deck still fails, one corrective round is sent; only after both rounds fail, or on timeout/HTTP errors, does it fall back to the fixed deck.
@@ -843,10 +849,11 @@ So cards measure "how strong is this card by itself", and scripts measure "how c
 
 - The opponent follows the same cost, Energy, pile and credit rules, with its own deck.
 - Its self-designed deck passes the same compiler, effect cap and comment check as yours.
-- It does not announce intent.
-- It cannot read your code, hand or draw order.
-- Its own card names, descriptions and pile contents enter the action prompt; yours never do.
-- Before the battle it reveals only its combat style, not its hand or plan.
+- It does not announce intent and never reveals its action plan in advance.
+- It can read both complete deck designs (including card effect source), but not your current hand contents, draw order or the scripts you have not executed this turn.
+- Both sides' card names, descriptions, effect source and registers enter the prompt; battle-time card instances expose only `name` and `cost`, so hidden information cannot be reverse-engineered from pile snapshots.
+- Before the battle it reveals only its combat style, not its hand or upcoming actions.
+- Every external-LLM strategy serves winning as the highest goal; persona only shapes tendencies and never trades away win rate.
 
 ---
 
@@ -1149,7 +1156,7 @@ npm test
 npm run build
 ```
 
-There are 8 test files and 67 tests. The build output is in `dist/`.
+There are 8 test files and 83 tests. The build output is in `dist/`.
 
 ### 17.3 When changing rules
 
@@ -1182,7 +1189,7 @@ Yes. Source goes through lexer/parser, IR, abstract interpretation and hard limi
 
 ### Q3: Can the AI peek at my cards or code?
 
-No. The AI receives the public board, its own hand (including its own card names and descriptions), its own draw and discard piles and the public action log. Your hand, draw order, code and card source never enter the prompt.
+It cannot peek at hidden state. Once the battle starts, the AI receives both complete deck designs (including every card's effect source), register declarations and live values, its own hand and piles, and the public action log. It cannot see your current hand contents, draw order, the scripts you have not executed this turn or your future intent; battle-time card instances expose only `name` and `cost`. Every AI strategy aims to win and never relies on hidden information.
 
 ### Q4: Why does my card fail to compile?
 
@@ -1240,7 +1247,7 @@ Chinese edition: [README.zh.md](README.zh.md).
 - Each card has fixed fields and one open `effect(self, ctx)`.
 - Each turn, write a short script in the terminal.
 - The engine statically analyzes and sandbox-executes every line, then logs the result.
-- The AI sees only the public board and its own hand.
+- The AI sees both deck designs, the register state, the public board and its own hand, but never your current hand contents or draw order.
 
 **Live:** https://warpshlczy.github.io/Code-the-Battle/
 

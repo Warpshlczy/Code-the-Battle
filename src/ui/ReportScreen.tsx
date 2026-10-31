@@ -288,10 +288,10 @@ export default function ReportScreen({ report, battle, onAgain, onBoot }: Props)
             </div>
           </Panel>
           <div className="report-side">
-            <Panel title={t('它不能做的事', 'What it cannot do')} meta={t('底线', 'limits')}>
+            <Panel title={t('它的信息边界', 'Its information boundary')} meta={t('底线', 'limits')}>
               <ul className="fair-list">
-                <li>{t('只看公开场面和自己的手牌', 'Sees only the public board and its own hand')}</li>
-                <li>{t('不读你的代码、手牌和抽牌顺序', 'Cannot read your code, hand or draw order')}</li>
+                <li>{t('能看到公开场面、双方完整牌组设计和寄存器状态', 'Sees the public board, both deck designs and the register state')}</li>
+                <li>{t('不看你当前的手牌、抽牌顺序和未执行的脚本', 'Cannot see your current hand, draw order or unexecuted scripts')}</li>
                 <li>{t('和你用同一套规则、编译器、能量与预算', 'Uses the same rules, compiler, energy and budget as you')}</li>
                 <li>{t('牌组由它自己设计，每张牌都要通过编译和注释校验', 'Its deck is self-designed; every card must pass compilation and comment checks')}</li>
                 <li>{t('外接战术只提出顺序，引擎逐条检查', 'External tactics only propose an order; the engine checks every item')}</li>

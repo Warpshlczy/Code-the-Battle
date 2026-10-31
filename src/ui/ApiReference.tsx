@@ -33,8 +33,8 @@ const GROUPS: ApiGroup[] = [
     nameEn: 'Play & order',
     items: [
       { sig: 'ctx.playcard()', insert: 'ctx.playcard()', desc: '打出当前手牌最左边的一张，只消耗能量，不读取手牌内容。', descEn: 'Play the leftmost card in hand. It spends energy only and never reads hand contents.', scope: 'script', price: '计费：固定 0.8 算力。', priceEn: 'Cost: flat 0.8 credits.' },
-      { sig: 'ctx.swap(pile, i, j)', insert: 'ctx.swap("hand", 0, 1)', desc: '交换同一牌堆里的两张牌，用来调整下一张打出的牌。', descEn: 'Swap two cards in the same pile to change which card is played next.', scope: 'both', price: '计费：固定 0.3 算力，不随位置变化。', priceEn: 'Cost: flat 0.3 credits, independent of positions.' },
-      { sig: 'ctx.move_card(from, i, to, j)', insert: 'ctx.move_card("draw", 0, "hand", 0)', desc: '把一张牌从任意牌堆移到另一个牌堆的指定位置。', descEn: 'Move a card from any pile to a chosen position in another pile.', scope: 'both', price: '计费：固定 0.5 算力。', priceEn: 'Cost: flat 0.5 credits.' },
+      { sig: 'ctx.swap(pile, i, j)', insert: 'ctx.swap("hand", 0, 1)', desc: '交换同一牌堆里的两张牌，用来调整下一张打出的牌；调度类 API 价格很低。', descEn: 'Swap two cards in the same pile to change which card is played next; scheduling APIs are cheap.', scope: 'both', price: '计费：固定 0.1 算力，不随位置变化。', priceEn: 'Cost: flat 0.1 credits, independent of positions.' },
+      { sig: 'ctx.move_card(from, i, to, j)', insert: 'ctx.move_card("draw", 0, "hand", 0)', desc: '把一张牌从任意牌堆移到另一个牌堆的指定位置；调度类 API 价格很低。', descEn: 'Move a card from any pile to a chosen position in another pile; scheduling APIs are cheap.', scope: 'both', price: '计费：固定 0.25 算力。', priceEn: 'Cost: flat 0.25 credits.' },
     ],
   },
   {
@@ -43,9 +43,9 @@ const GROUPS: ApiGroup[] = [
     items: [
       { sig: 'ctx.draw(count)', insert: 'ctx.draw(1)', desc: '从抽牌堆抽 n 张牌，抽牌堆为空时自动把弃牌堆洗回。', descEn: 'Draw n cards from the draw pile; the discard pile is reshuffled automatically when needed.', scope: 'both', price: '计费：1.5 + 0.9n + 0.04n²，张数越多单价越高。', priceEn: 'Cost: 1.5 + 0.9n + 0.04n²; larger draws cost more per card.' },
       { sig: 'ctx.discard(count)', insert: 'ctx.discard(1)', desc: '弃掉最左边的 n 张手牌，放进弃牌堆。', descEn: 'Discard the leftmost n cards in hand into the discard pile.', scope: 'both', price: '计费：1.2 + 0.7n，按弃牌张数线性增长。', priceEn: 'Cost: 1.2 + 0.7n, linear in the number discarded.' },
-      { sig: 'ctx.shuffle()', insert: 'ctx.shuffle()', desc: '按本局种子重洗抽牌堆，不改变牌的总数。', descEn: "Reshuffle the draw pile using this run's seed without changing the total card count.", scope: 'both', price: '计费：固定 2.5 算力。', priceEn: 'Cost: flat 2.5 credits.' },
-      { sig: 'ctx.reshuffle()', insert: 'ctx.reshuffle()', desc: '把弃牌堆洗回抽牌堆，抽牌堆满时停止。', descEn: 'Shuffle the discard pile back into the draw pile, stopping when the draw pile is full.', scope: 'both', price: '计费：固定 3 算力。', priceEn: 'Cost: flat 3 credits.' },
-      { sig: 'ctx.pile_costs(pile)', insert: 'ctx.pile_costs("hand")', desc: '读取一个牌堆里每张牌的费用，返回只读列表。', descEn: 'Read the cost of every card in one pile as a read-only list.', scope: 'both', price: '计费：0.3 + 0.08n，n 为读到的张数。', priceEn: 'Cost: 0.3 + 0.08n, where n is the number of cards read.' },
+      { sig: 'ctx.shuffle()', insert: 'ctx.shuffle()', desc: '按本局种子重洗抽牌堆，不改变牌的总数。', descEn: "Reshuffle the draw pile using this run's seed without changing the total card count.", scope: 'both', price: '计费：固定 1.2 算力。', priceEn: 'Cost: flat 1.2 credits.' },
+      { sig: 'ctx.reshuffle()', insert: 'ctx.reshuffle()', desc: '把弃牌堆洗回抽牌堆，抽牌堆满时停止。', descEn: 'Shuffle the discard pile back into the draw pile, stopping when the draw pile is full.', scope: 'both', price: '计费：固定 1.5 算力。', priceEn: 'Cost: flat 1.5 credits.' },
+      { sig: 'ctx.pile_costs(pile)', insert: 'ctx.pile_costs("hand")', desc: '读取一个牌堆里每张牌的费用，返回只读数字列表。', descEn: 'Read the cost of every card in one pile as a read-only number list.', scope: 'both', price: '计费：0.15 + 0.04n，n 为读到的张数。', priceEn: 'Cost: 0.15 + 0.04n, where n is the number of cards read.' },
     ],
   },
   {
@@ -69,12 +69,13 @@ const GROUPS: ApiGroup[] = [
       { sig: 'ctx.getEnergy()', insert: 'ctx.getEnergy()', desc: '读取自己当前能量。', descEn: 'Read your current Energy.', scope: 'read', price: '计费：0.1 + 0.04×当前能量。', priceEn: 'Cost: 0.1 + 0.04×current Energy.' },
       { sig: 'ctx.getBlock()', insert: 'ctx.getBlock()', desc: '读取自己当前格挡。', descEn: 'Read your current Block.', scope: 'read', price: '计费：0.1 + 0.02×当前格挡。', priceEn: 'Cost: 0.1 + 0.02×current Block.' },
       { sig: 'ctx.getMaxEnergy()', insert: 'ctx.getMaxEnergy()', desc: '读取每回合能量上限。', descEn: 'Read the per-turn Energy cap.', scope: 'read', price: '计费：0.1 + 0.04×上限。', priceEn: 'Cost: 0.1 + 0.04×cap.' },
-      { sig: 'ctx.getHand()', insert: 'ctx.getHand()', desc: '读取自己手牌的只读快照，能看到名称、费用、类型和目标。', descEn: 'Read a read-only snapshot of your hand with names, costs, types and targets.', scope: 'both', price: '计费：0.4 + 0.12×手牌数。', priceEn: 'Cost: 0.4 + 0.12×hand size.' },
-      { sig: 'ctx.getDraw()', insert: 'ctx.getDraw()', desc: '读取抽牌堆的只读快照。', descEn: 'Read a read-only snapshot of the draw pile.', scope: 'both', price: '计费：0.4 + 0.12×抽牌数。', priceEn: 'Cost: 0.4 + 0.12×draw size.' },
-      { sig: 'ctx.getDiscard()', insert: 'ctx.getDiscard()', desc: '读取弃牌堆的只读快照。', descEn: 'Read a read-only snapshot of the discard pile.', scope: 'both', price: '计费：0.4 + 0.12×弃牌数。', priceEn: 'Cost: 0.4 + 0.12×discard size.' },
-      { sig: 'ctx.hand_size()', insert: 'ctx.hand_size()', desc: '读取手牌数量。', descEn: 'Read the hand size.', scope: 'both', price: '计费：0.1 + 0.06×手牌数。', priceEn: 'Cost: 0.1 + 0.06×hand size.' },
-      { sig: 'ctx.draw_size()', insert: 'ctx.draw_size()', desc: '读取抽牌堆数量。', descEn: 'Read the draw pile size.', scope: 'both', price: '计费：0.1 + 0.06×抽牌数。', priceEn: 'Cost: 0.1 + 0.06×draw size.' },
-      { sig: 'ctx.discard_size()', insert: 'ctx.discard_size()', desc: '读取弃牌堆数量。', descEn: 'Read the discard pile size.', scope: 'both', price: '计费：0.1 + 0.06×弃牌数。', priceEn: 'Cost: 0.1 + 0.06×discard size.' },
+      { sig: 'ctx.getHand()', insert: 'ctx.getHand()', desc: '读取自己手牌的只读快照；每项是卡牌对象，只有 name 与 cost。', descEn: 'Read a read-only snapshot of your hand; each item is a card object with only name and cost.', scope: 'both', price: '计费：0.2 + 0.06×手牌数。', priceEn: 'Cost: 0.2 + 0.06×hand size.' },
+      { sig: 'ctx.getDraw()', insert: 'ctx.getDraw()', desc: '读取抽牌堆的只读快照；每项是卡牌对象，只有 name 与 cost。', descEn: 'Read a read-only snapshot of the draw pile; each item is a card object with only name and cost.', scope: 'both', price: '计费：0.2 + 0.06×抽牌数。', priceEn: 'Cost: 0.2 + 0.06×draw size.' },
+      { sig: 'ctx.getDiscard()', insert: 'ctx.getDiscard()', desc: '读取弃牌堆的只读快照；每项是卡牌对象，只有 name 与 cost。', descEn: 'Read a read-only snapshot of the discard pile; each item is a card object with only name and cost.', scope: 'both', price: '计费：0.2 + 0.06×弃牌数。', priceEn: 'Cost: 0.2 + 0.06×discard size.' },
+      { sig: 'ctx.getPile(pile)', insert: 'ctx.getPile("hand")', desc: '按名字读取任意自己的牌堆；返回卡牌对象数组，每项只有 name 与 cost。', descEn: 'Read any of your piles by name; returns card objects with only name and cost.', scope: 'both', price: '计费：0.2 + 0.06×牌堆张数。', priceEn: 'Cost: 0.2 + 0.06×pile size.' },
+      { sig: 'ctx.hand_size()', insert: 'ctx.hand_size()', desc: '读取手牌数量。', descEn: 'Read the hand size.', scope: 'both', price: '计费：0.05 + 0.03×手牌数。', priceEn: 'Cost: 0.05 + 0.03×hand size.' },
+      { sig: 'ctx.draw_size()', insert: 'ctx.draw_size()', desc: '读取抽牌堆数量。', descEn: 'Read the draw pile size.', scope: 'both', price: '计费：0.05 + 0.03×抽牌数。', priceEn: 'Cost: 0.05 + 0.03×draw size.' },
+      { sig: 'ctx.discard_size()', insert: 'ctx.discard_size()', desc: '读取弃牌堆数量。', descEn: 'Read the discard pile size.', scope: 'both', price: '计费：0.05 + 0.03×弃牌数。', priceEn: 'Cost: 0.05 + 0.03×discard size.' },
       { sig: 'ctx.turn.played_count', insert: 'ctx.turn.played_count', desc: '读取本回合已经打出的牌数。', descEn: 'Read how many cards have been played this turn.', scope: 'read', price: '计费：1.0 基准，再乘表达式。', priceEn: 'Cost: 1.0 base, then scaled by the expression.' },
       { sig: 'ctx.turn.discarded_count', insert: 'ctx.turn.discarded_count', desc: '读取本回合已经弃掉的牌数。', descEn: 'Read how many cards have been discarded this turn.', scope: 'read', price: '计费：1.0 基准，再乘表达式。', priceEn: 'Cost: 1.0 base, then scaled by the expression.' },
     ],
@@ -90,13 +91,14 @@ const GROUPS: ApiGroup[] = [
 ];
 
 const EFFECT_PRICE: Record<string, [string, string]> = {
-  'ctx.swap(pile, i, j)': ['0.5 效果值', '0.5 effect value'],
-  'ctx.move_card(from, i, to, j)': ['0.6 效果值', '0.6 effect value'],
+  'ctx.swap(pile, i, j)': ['0.25 效果值', '0.25 effect value'],
+  'ctx.move_card(from, i, to, j)': ['0.35 效果值', '0.35 effect value'],
   'ctx.draw(count)': ['0.6 + 0.5n', '0.6 + 0.5n'],
   'ctx.discard(count)': ['0.4 + 0.25n', '0.4 + 0.25n'],
-  'ctx.shuffle()': ['1.0 效果值', '1.0 effect value'],
-  'ctx.reshuffle()': ['1.2 效果值', '1.2 effect value'],
-  'ctx.pile_costs(pile)': ['0.4 效果值', '0.4 effect value'],
+  'ctx.shuffle()': ['0.5 效果值', '0.5 effect value'],
+  'ctx.reshuffle()': ['0.6 效果值', '0.6 effect value'],
+  'ctx.pile_costs(pile)': ['0.25 效果值', '0.25 effect value'],
+  'ctx.getPile(pile)': ['0.8 固定，读取牌堆', '0.8 fixed · reads a pile'],
   'ctx.deal_damage(target, amount)': ['0.8 + 0.22a', '0.8 + 0.22a'],
   'ctx.gain_block(amount)': ['0.6 + 0.2a', '0.6 + 0.2a'],
   'ctx.heal(amount)': ['0.7 + 0.3a', '0.7 + 0.3a'],
@@ -110,12 +112,12 @@ const EFFECT_PRICE: Record<string, [string, string]> = {
   'ctx.getMaxEnergy()': ['2.2 固定，全局动态数据', '2.2 fixed · global dynamic read'],
   'ctx.enemy.hp()': ['6.0 固定，全局动态数据', '6.0 fixed · global dynamic read'],
   'ctx.enemy.block()': ['2.4 固定，全局动态数据', '2.4 fixed · global dynamic read'],
-  'ctx.getHand()': ['1.4 固定，读取手牌', '1.4 fixed · reads the hand'],
-  'ctx.getDraw()': ['1.4 固定，读取抽牌堆', '1.4 fixed · reads the draw pile'],
-  'ctx.getDiscard()': ['1.4 固定，读取弃牌堆', '1.4 fixed · reads the discard pile'],
-  'ctx.hand_size()': ['1.1 固定，读取数量', '1.1 fixed · reads a count'],
-  'ctx.draw_size()': ['1.1 固定，读取数量', '1.1 fixed · reads a count'],
-  'ctx.discard_size()': ['1.1 固定，读取数量', '1.1 fixed · reads a count'],
+  'ctx.getHand()': ['0.8 固定，读取手牌', '0.8 fixed · reads the hand'],
+  'ctx.getDraw()': ['0.8 固定，读取抽牌堆', '0.8 fixed · reads the draw pile'],
+  'ctx.getDiscard()': ['0.8 固定，读取弃牌堆', '0.8 fixed · reads the discard pile'],
+  'ctx.hand_size()': ['0.7 固定，读取数量', '0.7 fixed · reads a count'],
+  'ctx.draw_size()': ['0.7 固定，读取数量', '0.7 fixed · reads a count'],
+  'ctx.discard_size()': ['0.7 固定，读取数量', '0.7 fixed · reads a count'],
   'ctx.turn.played_count': ['1.2 基准，再乘表达式', '1.2 base · scaled by the expression'],
   'ctx.turn.discarded_count': ['1.2 基准，再乘表达式', '1.2 base · scaled by the expression'],
   'ctx.get_global(name)': ['1.6 固定，玩家自定义状态', '1.6 fixed · player-defined state'],
@@ -152,8 +154,8 @@ export function ApiReference({
               `Battle billing: ${CREDIT_BUDGET} credits per turn, reusable across multiple executions; deeper reads cost more.`,
             )
           : t(
-              '构筑计费：只看效果上限，不看对局算力。全局动态读取最贵，自定义寄存器次之。',
-              'Build billing: only the effect cap matters, not battle credits. Global dynamic reads are the most expensive, followed by custom registers.',
+              '构筑计费：调度类 API 最便宜；读取与全局动态读取更贵，最终都受费用对应的效果上限约束。',
+              'Build billing: scheduling APIs are cheapest; reads and global dynamic reads cost more, all under the cap set by card cost.',
             )}
       </p>
       {GROUPS.map((group) => {

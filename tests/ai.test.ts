@@ -6,6 +6,7 @@ import {
   designAiDeck,
   extractJsonValue,
   heuristicPlan,
+  MAX_LLM_TIMEOUT_MS,
   normalizeEndpoint,
   probeAiConnection,
   proposeAiPlan,
@@ -16,9 +17,10 @@ import {
   type AiPersona,
   type AiView,
 } from '../src/engine/ai';
-import { compileCard } from '../src/engine/analyze';
+import { compileCard, compileScript } from '../src/engine/analyze';
 import { Battle, PERSONAS } from '../src/engine/battle';
 import { API_SPECS } from '../src/engine/config';
+import { DEFAULT_REGISTERS } from '../src/content/deck';
 
 function view(persona: AiPersona): AiView {
   return {
@@ -43,6 +45,10 @@ function view(persona: AiPersona): AiView {
 }
 
 describe('opponent contract', () => {
+  it('allows late-game plan requests up to two minutes', () => {
+    expect(MAX_LLM_TIMEOUT_MS).toBe(120_000);
+  });
+
   it('ships exactly the five fixed personas', () => {
     expect(PERSONAS).toHaveLength(5);
     for (const p of PERSONAS) {
@@ -60,14 +66,27 @@ describe('opponent contract', () => {
     }
   });
 
-  it('sends its own hand, piles, resources, public history and the API guide to the model', () => {
+  it('sends its own deck, the public player deck, registers, piles and the API guide to the model', () => {
     const v = view('aggressor');
     v.self.energyMax = 5;
     v.self.handLimit = 10;
     v.self.drawLimit = 10;
-    v.self.drawPile = [
+    v.self.drawPile = [{ slot: 0, name: '后手补给', cost: 1 }];
+    v.self.discardPile = [{ slot: 0, name: '旧盾', cost: 1 }];
+    v.self.hand[0] = { ...v.self.hand[0], name: '处决斩' };
+    v.self.deck = [
       {
         slot: 0,
+        name: '处决斩',
+        cost: 2,
+        type: 'attack',
+        target: 'enemy',
+        description: '造成 12 点伤害',
+        api: ['deal_damage'],
+        source: 'class 处决斩(Card):\n    def effect(self, ctx):\n        ctx.deal_damage("enemy", 12)',
+      },
+      {
+        slot: 1,
         name: '后手补给',
         cost: 1,
         type: 'skill',
@@ -76,16 +95,30 @@ describe('opponent contract', () => {
         api: ['gain_energy'],
         source: 'class PileSource(Card):\n    def effect(self, ctx):\n        ctx.gain_energy(2)',
       },
+      {
+        slot: 2,
+        name: '旧盾',
+        cost: 1,
+        type: 'skill',
+        target: 'self',
+        description: '获得 6 格挡',
+        api: ['gain_block'],
+        source: 'class OldShield(Card):\n    def effect(self, ctx):\n        ctx.gain_block(6)',
+      },
     ];
-    v.self.discardPile = [
-      { slot: 0, name: '旧盾', cost: 1, type: 'skill', target: 'self', description: '获得 6 格挡', api: ['gain_block'] },
+    v.opponent.deck = [
+      {
+        slot: 0,
+        name: '玩家自定义牌',
+        cost: 2,
+        type: 'skill',
+        target: 'self',
+        description: '玩家设计的隐藏组合',
+        api: ['gain_block', 'get_global'],
+        source: 'class PlayerSeal(Card):\n    def effect(self, ctx):\n        ctx.gain_block(6)\n        ctx.get_global("combo")',
+      },
     ];
-    v.self.hand[0] = {
-      ...v.self.hand[0],
-      name: '处决斩',
-      description: '造成 12 点伤害',
-      source: 'class 处决斩(Card):\n    def effect(self, ctx):\n        ctx.deal_damage("enemy", 12)',
-    };
+    v.registers = [{ name: 'combo', type: 'int', value: 7, min: 0, max: 20, owner: 'player' }];
     v.history = {
       maxTurns: 30,
       recentEvents: [{ turn: 2, actor: 'player', type: 'card_play', text: '你 打出最左牌【侦察】' }],
@@ -97,13 +130,18 @@ describe('opponent contract', () => {
     expect(prompt).toContain('ctx.deal_damage');
     expect(prompt).toContain('后手补给');
     expect(prompt).toContain('旧盾');
-    expect(prompt).not.toContain('class PileSource(Card)');
+    expect(prompt).toContain('玩家自定义牌');
+    expect(prompt).toContain('玩家设计的隐藏组合');
+    expect(prompt).toContain('class PlayerSeal(Card)');
     expect(prompt).toContain('"drawPile"');
     expect(prompt).toContain('"discardPile"');
     expect(prompt).toContain('"energyMax":5');
     expect(prompt).toContain('【资源账本】');
-    expect(prompt).toContain('【自己的牌组】');
+    expect(prompt).toContain('【牌组公开】');
+    expect(prompt).toContain('【寄存器】');
+    expect(prompt).toContain('"value":7');
     expect(prompt).toContain('【算法辅助】');
+    expect(prompt).toContain('唯一最高目标');
     expect(prompt).toContain('公开场面');
     expect(prompt).toContain('recentEvents');
     expect(prompt).toContain('previousPlans');
@@ -113,6 +151,18 @@ describe('opponent contract', () => {
     }
     expect(prompt).not.toContain('ctx.playcard(');
     expect(prompt).not.toContain('ctx.set_global(');
+
+    const stateText = prompt.slice(prompt.indexOf('JSON_STATE:') + 'JSON_STATE:'.length).trim();
+    const state = JSON.parse(stateText) as {
+      self: { hand: Record<string, unknown>[]; deck: { name: string }[] };
+      opponent_public: { deck: { name: string }[] };
+      registers: { name: string; value: number }[];
+    };
+    // Battle-time instances expose only the name and energy cost.
+    expect(Object.keys(state.self.hand[0]).sort()).toEqual(['cost', 'name', 'slot']);
+    expect(state.self.deck[0].name).toBe('处决斩');
+    expect(state.opponent_public.deck[0].name).toBe('玩家自定义牌');
+    expect(state.registers[0]).toMatchObject({ name: 'combo', value: 7 });
   });
 
   it('keeps hidden player piles, registers, code and logs out of the history', () => {
@@ -331,6 +381,51 @@ describe('plan parsing tolerance', () => {
 describe('plan execution', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('gives the model both deck designs and live register values once the battle starts', async () => {
+    const playerCard = compileCard(`class PlayerSecret(Card):
+    name = "玩家秘密牌"
+    cost = 1
+    type = "skill"
+    target = "self"
+
+    def effect(self, ctx):
+        ctx.gain_block(6)  // 玩家自定义的 6 点格挡
+`, []).value!;
+    const aiCard = compileCard(`class AiProbe(Card):
+    name = "AI 探针"
+    cost = 1
+    type = "attack"
+    target = "enemy"
+
+    def effect(self, ctx):
+        ctx.deal_damage("enemy", 6)  // 6 点伤害
+`, []).value!;
+    let userContent = '';
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { messages: { role: string; content: string }[] };
+      userContent = body.messages[1].content;
+      return planResponse({ content: '{"ops":[{"op":"play"},{"op":"end"}]}' });
+    }));
+    const battle = new Battle({
+      seed: 7,
+      playerDeck: [playerCard],
+      registers: DEFAULT_REGISTERS,
+      aiDeck: [aiCard, aiCard],
+      aiMode: 'llm',
+      aiConfig: { endpoint: 'https://example.test/v1', model: 'test-model' },
+    });
+    const script = compileScript('ctx.set_global("combo", 5)', DEFAULT_REGISTERS);
+    expect(script.ok).toBe(true);
+    await battle.executePlayerScript(script.value!);
+    await battle.endPlayerTurn();
+    expect(userContent).toContain('玩家秘密牌');
+    expect(userContent).toContain('玩家自定义的 6 点格挡');
+    expect(userContent).toContain('class PlayerSecret(Card)');
+    expect(userContent).toContain('AI 探针');
+    expect(userContent).toContain('"name":"combo"');
+    expect(userContent).toContain('"value":5');
+  });
+
   it('lets a plan spend energy generated by an earlier card instead of falling back', async () => {
     const capacitor = compileCard(`class Capacitor(Card):
     name = "Capacitor"
@@ -418,8 +513,8 @@ describe('SENTINEL deck design', () => {
     }), { status: 200 });
   }
 
-  it('asks for short self-designed cards and lists every card-callable API', () => {
-    const prompt = buildAiDeckPrompt('controller', 'zh');
+  it('asks for short self-designed cards and lists APIs, registers and resource limits', () => {
+    const prompt = buildAiDeckPrompt('controller', 'zh', DEFAULT_REGISTERS);
     expect(prompt).toContain('尽可能短');
     expect(prompt).toContain('//');
     expect(prompt).toContain('至少设计 2 张 "attack" 牌');
@@ -428,6 +523,11 @@ describe('SENTINEL deck design', () => {
     expect(prompt).toContain('if/elif/else');
     expect(prompt).toContain('for/while');
     expect(prompt).toContain('静态最坏值');
+    expect(prompt).toContain('最高目标是取胜');
+    expect(prompt).toContain('复杂度上限 80');
+    expect(prompt).toContain('combo: int');
+    expect(prompt).toContain('范围 [0, 20]');
+    expect(prompt).toContain('get_global("name")');
     for (const api of API_SPECS.filter((spec) => spec.scope !== 'script')) {
       expect(prompt).toContain(`ctx.${api.name}(`);
     }
@@ -501,6 +601,31 @@ describe('SENTINEL deck design', () => {
     expect(design.meta.source).toBe('llm');
     expect(design.meta.tokens).toBe(40);
     expect(design.meta.note).toContain('自行设计 6 张牌');
+  });
+
+  it('compiles self-designed cards against the player-declared registers', async () => {
+    const registerReader = `class ComboScout(Card):
+    name = "寄存器侦察"
+    cost = 2
+    type = "skill"
+    target = "self"
+
+    def effect(self, ctx):
+        x = ctx.get_global("combo")
+        ctx.log(str(x))
+        ctx.gain_block(2)  // 读取 combo 当前值并获得 2 格挡
+`;
+    const sources = [attackCard(1), attackCard(2), guardCard(3), guardCard(4), guardCard(5), registerReader];
+    vi.stubGlobal('fetch', vi.fn(async () => deckResponse(sources)));
+    const design = await designAiDeck(
+      { endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' },
+      'controller',
+      'zh',
+      DEFAULT_REGISTERS,
+    );
+    expect(design.ok).toBe(true);
+    expect(design.cards.some((card) => card.name === '寄存器侦察')).toBe(true);
+    expect(design.cards.find((card) => card.name === '寄存器侦察')?.apiUses.some((use) => use.name === 'get_global')).toBe(true);
   });
 
   it('falls back with a recorded note when the designed deck fails validation', async () => {
