@@ -281,6 +281,11 @@ const CARD_READ_EFFECT_COST: Record<string, number> = {
   'enemy.block': 2.4,
 };
 
+/** Fixed build-time price for read APIs whose runtime value cannot be known statically. */
+export function cardEffectPrice(name: string): number | undefined {
+  return CARD_READ_EFFECT_COST[name];
+}
+
 class Analyzer {
   program: IRProgram;
   registers: RegisterDecl[];
